@@ -1,0 +1,273 @@
+/*
+  In Their World — styles
+  All selectors are scoped under .itw-root and prefixed with itw- so this
+  can be dropped into an existing site without leaking or colliding with
+  other styles. Fonts are loaded via a <link> tag in index.html (not an
+  @import here) to avoid a render-blocking font fetch.
+*/
+
+.itw-root{
+  --itw-bg:#111524;
+  --itw-panel:#1a2036;
+  --itw-panel-2:#212844;
+  --itw-border:#2b3352;
+  --itw-text:#ece9e1;
+  --itw-muted:#98a0bd;
+  --itw-muted-dim:#6b7392;
+
+  --itw-autism:#4fb3a6;
+  --itw-autism-soft:rgba(79,179,166,.14);
+  --itw-adhd:#e8a23d;
+  --itw-adhd-soft:rgba(232,162,61,.14);
+  --itw-dyslexia:#a48ce0;
+  --itw-dyslexia-soft:rgba(164,140,224,.14);
+  --itw-speech:#e37b6e;
+  --itw-speech-soft:rgba(227,123,110,.14);
+
+  --itw-accent:var(--itw-autism);
+  --itw-accent-soft:var(--itw-autism-soft);
+
+  position:relative;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(255,255,255,.03), transparent 60%),
+    var(--itw-bg);
+  color:var(--itw-text);
+  font-family:'Inter',system-ui,sans-serif;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  border-radius:14px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.itw-root *{box-sizing:border-box;}
+.itw-root ::selection{background:var(--itw-accent);color:#111;}
+.itw-root a{color:inherit;}
+.itw-serif{font-family:'Newsreader',serif;}
+.itw-mono{font-family:'IBM Plex Mono',monospace;}
+
+.itw-root :focus-visible{outline:2px solid var(--itw-accent);outline-offset:3px;border-radius:3px;}
+
+/* ---------- ambient atmosphere ---------- */
+/* a slow, breathing wash of the active section's accent colour, plus a
+   fine paper-grain texture — the one place this design spends its motion
+   budget on mood rather than function. */
+.itw-grain{
+  position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.itw-ambient{
+  position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(760px 420px at 82% 0%, var(--itw-glow, rgba(79,179,166,.16)), transparent 65%);
+  opacity:.85;
+  transition:background 900ms ease;
+  animation:itw-breathe 9s ease-in-out infinite;
+}
+@keyframes itw-breathe{0%,100%{opacity:.65;}50%{opacity:1;}}
+
+/* ---------- shell ---------- */
+.itw-app{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:0 24px 96px;}
+
+/* ---------- view transitions ---------- */
+.itw-view{animation:itw-view-in 560ms cubic-bezier(.16,.8,.3,1) both;}
+@keyframes itw-view-in{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.itw-rise{opacity:0;animation:itw-rise-in 620ms cubic-bezier(.16,.8,.3,1) both;}
+@keyframes itw-rise-in{
+  from{opacity:0;transform:translateY(14px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.itw-rise-1{animation-delay:20ms;}
+.itw-rise-2{animation-delay:110ms;}
+.itw-rise-3{animation-delay:200ms;}
+.itw-rise-4{animation-delay:290ms;}
+.itw-rise-5{animation-delay:380ms;}
+
+/* ---------- landing ---------- */
+.itw-masthead{padding:56px 0 40px;border-bottom:1px solid var(--itw-border);}
+.itw-eyebrow{
+  font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--itw-muted);display:flex;align-items:center;gap:10px;
+}
+.itw-eyebrow::before{content:"";width:22px;height:1px;background:var(--itw-muted-dim);display:inline-block;}
+.itw-title{
+  font-family:'Newsreader',serif;font-weight:500;font-size:clamp(34px,6vw,54px);
+  line-height:1.05;margin:18px 0 20px;letter-spacing:-.01em;
+}
+.itw-title em{font-style:italic;color:var(--itw-adhd);}
+.itw-lede{font-size:17px;color:var(--itw-muted);max-width:56ch;margin:0 0 8px;}
+.itw-disclaimer{
+  margin-top:26px;padding:14px 16px;background:var(--itw-panel);border:1px solid var(--itw-border);
+  border-left:3px solid var(--itw-adhd);border-radius:4px;font-size:13.5px;color:var(--itw-muted);
+}
+.itw-disclaimer strong{color:var(--itw-text);}
+
+.itw-grid-eyebrow{
+  margin-top:44px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--itw-muted-dim);display:flex;align-items:center;gap:10px;
+}
+.itw-grid-eyebrow::after{content:"";flex:1;height:1px;background:var(--itw-border);}
+
+.itw-module-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+@media (max-width:640px){.itw-module-grid{grid-template-columns:1fr;}}
+
+.itw-mcard{
+  position:relative;background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:8px;
+  padding:22px 20px 20px;cursor:pointer;text-align:left;overflow:hidden;width:100%;
+  transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  font-family:inherit;color:inherit;
+}
+.itw-mcard:hover, .itw-mcard:focus-visible{
+  transform:translateY(-3px);border-color:var(--card-accent);background:var(--itw-panel-2);
+  box-shadow:0 14px 30px -18px rgba(0,0,0,.6);
+}
+.itw-mcard::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--card-accent);}
+.itw-mcard .itw-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--card-accent);}
+.itw-mcard h3{font-family:'Newsreader',serif;font-weight:500;font-size:26px;margin:8px 0 8px;}
+.itw-mcard p{font-size:14px;color:var(--itw-muted);margin:0 0 14px;}
+.itw-mcard .itw-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--itw-text);display:flex;align-items:baseline;gap:6px;}
+.itw-mcard .itw-stat b{font-size:15px;color:var(--card-accent);}
+.itw-mcard .itw-enter{
+  position:absolute;right:18px;bottom:18px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+  color:var(--card-accent);opacity:0;transform:translateX(-6px);transition:opacity .18s ease, transform .18s ease;
+}
+.itw-mcard:hover .itw-enter, .itw-mcard:focus-visible .itw-enter{opacity:1;transform:translateX(0);}
+.itw-mcard[data-m="autism"]{--card-accent:var(--itw-autism);}
+.itw-mcard[data-m="adhd"]{--card-accent:var(--itw-adhd);}
+.itw-mcard[data-m="dyslexia"]{--card-accent:var(--itw-dyslexia);}
+.itw-mcard[data-m="speech"]{--card-accent:var(--itw-speech);}
+
+.itw-foot-note{margin-top:52px;padding-top:20px;border-top:1px solid var(--itw-border);font-size:12.5px;color:var(--itw-muted-dim);}
+
+/* ---------- module shell ---------- */
+.itw-module{padding-top:36px;}
+.itw-module-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.itw-back-btn{
+  background:none;border:1px solid var(--itw-border);color:var(--itw-muted);
+  font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 14px;border-radius:20px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;transition:border-color .15s, color .15s;
+}
+.itw-back-btn:hover{border-color:var(--itw-accent);color:var(--itw-text);}
+
+/* module switcher — a real map of the four experiences, not decoration */
+.itw-switch{display:flex;gap:6px;}
+.itw-switch button{
+  width:9px;height:9px;border-radius:50%;border:1px solid var(--itw-border);background:none;padding:0;
+  cursor:pointer;transition:transform .15s ease, background .15s ease, border-color .15s ease;
+}
+.itw-switch button:hover{transform:scale(1.3);}
+.itw-switch button.itw-current{background:var(--itw-accent);border-color:var(--itw-accent);transform:scale(1.3);cursor:default;}
+
+.itw-module-head{margin:26px 0 6px;}
+.itw-module-head .itw-eyebrow{color:var(--itw-accent);}
+.itw-module-head .itw-eyebrow::before{background:var(--itw-accent);}
+.itw-mtitle{font-family:'Newsreader',serif;font-weight:500;font-size:clamp(30px,5vw,44px);margin:14px 0 10px;}
+.itw-module-dek{color:var(--itw-muted);font-size:16px;max-width:60ch;margin-bottom:8px;}
+
+.itw-block{margin-top:48px;}
+.itw-block-label{
+  font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--itw-muted-dim);margin-bottom:14px;display:flex;align-items:center;gap:10px;
+}
+.itw-block-label::after{content:"";flex:1;height:1px;background:var(--itw-border);}
+
+/* ---------- sim shell ---------- */
+.itw-sim{border:1px solid var(--itw-border);border-radius:10px;background:var(--itw-panel);overflow:hidden;box-shadow:0 20px 44px -30px rgba(0,0,0,.7);}
+.itw-sim-stage{position:relative;min-height:280px;background:#0d1120;overflow:hidden;background-image:linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);background-size:28px 28px;}
+.itw-sim-controls{padding:16px 18px;border-top:1px solid var(--itw-border);background:var(--itw-panel);display:flex;flex-wrap:wrap;gap:14px;align-items:center;}
+.itw-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.itw-sim-instructions{padding:14px 18px;font-size:13.5px;color:var(--itw-muted);border-bottom:1px solid var(--itw-border);background:rgba(255,255,255,.015);}
+.itw-root input[type=range]{accent-color:var(--itw-accent);width:160px;}
+.itw-btn-primary{
+  background:var(--itw-accent);color:#0d1120;border:none;font-weight:600;font-size:13.5px;
+  padding:9px 16px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;transition:filter .15s, transform .1s;
+}
+.itw-btn-primary:hover{filter:brightness(1.08);}
+.itw-btn-primary:active{transform:translateY(1px);}
+.itw-btn-primary:disabled{opacity:.5;cursor:default;}
+.itw-btn-ghost{
+  background:none;border:1px solid var(--itw-border);color:var(--itw-text);padding:8px 14px;border-radius:6px;
+  cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;transition:border-color .15s, color .15s;
+}
+.itw-btn-ghost.itw-active{border-color:var(--itw-accent);color:var(--itw-accent);}
+.itw-readout{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--itw-muted);}
+
+/* ---------- facts ---------- */
+.itw-facts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+@media (max-width:680px){.itw-facts-grid{grid-template-columns:1fr;}}
+.itw-fact-card{background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:8px;padding:18px 16px;transition:border-color .15s ease;}
+.itw-fact-card:hover{border-color:var(--itw-accent);}
+.itw-fact-card .itw-num{font-family:'Newsreader',serif;font-size:32px;color:var(--itw-accent);line-height:1;}
+.itw-fact-card .itw-lbl{font-size:13px;color:var(--itw-muted);margin-top:8px;}
+.itw-fact-card .itw-src{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--itw-muted-dim);margin-top:10px;}
+.itw-fact-note{margin-top:14px;font-size:14.5px;color:var(--itw-muted);border-left:2px solid var(--itw-border);padding-left:14px;}
+
+/* ---------- strategies ---------- */
+.itw-strat-tabs{display:flex;gap:8px;margin-bottom:16px;}
+.itw-strat-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;}
+.itw-strat-list li{
+  background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:8px;
+  padding:14px 16px 14px 42px;position:relative;font-size:14.5px;transition:border-color .15s ease, background .15s ease;
+}
+.itw-strat-list li:hover{border-color:var(--itw-accent);background:var(--itw-panel-2);}
+.itw-strat-list li::before{content:"→";position:absolute;left:16px;top:14px;color:var(--itw-accent);font-weight:600;}
+
+/* ================= AUTISM sim ================= */
+.itw-sensory-target{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;}
+.itw-sensory-target .itw-dot{width:26px;height:26px;border-radius:50%;background:#e5484d;margin:0 auto 8px;box-shadow:0 0 0 6px rgba(229,72,77,.15);}
+.itw-sensory-target p{font-size:12px;color:var(--itw-muted);margin:0;font-family:'IBM Plex Mono',monospace;}
+.itw-noise-item{position:absolute;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#fff;white-space:nowrap;will-change:transform,opacity;}
+.itw-flicker-overlay{position:absolute;inset:0;background:#fff;mix-blend-mode:overlay;pointer-events:none;}
+.itw-buzz-shape{position:absolute;border-radius:50%;filter:blur(1px);}
+@keyframes itw-floaty{0%,100%{transform:translate(0,0);}50%{transform:translate(6px,-6px);}}
+
+/* ================= ADHD sim ================= */
+.itw-focus-field{position:relative;width:100%;height:280px;}
+.itw-num-btn{
+  position:absolute;width:40px;height:40px;border-radius:50%;background:var(--itw-panel-2);
+  border:2px solid var(--itw-adhd);color:var(--itw-text);font-weight:700;font-family:'IBM Plex Mono',monospace;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s, background .15s, border-color .2s;z-index:4;
+}
+.itw-num-btn:hover{transform:scale(1.08);}
+.itw-num-btn.itw-done{background:var(--itw-adhd);color:#0d1120;border-color:var(--itw-adhd);opacity:.5;pointer-events:none;}
+.itw-num-btn.itw-miss{border-color:#e5484d;}
+.itw-distraction{
+  position:absolute;background:var(--itw-panel-2);border:1px solid var(--itw-adhd);color:var(--itw-text);
+  font-size:12px;padding:6px 10px;border-radius:16px;font-family:'IBM Plex Mono',monospace;z-index:3;
+  pointer-events:none;transition:opacity .3s;
+}
+
+/* ================= DYSLEXIA sim ================= */
+.itw-reading-passage{padding:26px 24px;font-size:19px;line-height:1.9;font-family:'Newsreader',serif;}
+.itw-reading-passage .itw-ch{display:inline-block;}
+.itw-reading-passage.itw-simulated .itw-ch{animation:itw-letter-jitter 2.6s ease-in-out infinite;letter-spacing:.01em;}
+.itw-reading-passage.itw-simulated{filter:blur(.25px);}
+@keyframes itw-letter-jitter{
+  0%,100%{transform:translateY(0) rotate(0deg);}
+  25%{transform:translateY(-1px) rotate(-1.5deg);}
+  50%{transform:translateY(1px) rotate(1deg);}
+  75%{transform:translateY(-.5px) rotate(-.5deg);}
+}
+
+/* ================= SPEECH sim ================= */
+.itw-speech-scene{display:flex;align-items:center;justify-content:center;height:140px;font-size:56px;letter-spacing:6px;}
+.itw-speech-output{min-height:60px;font-family:'Newsreader',serif;font-size:19px;padding:0 4px;}
+.itw-speech-output .itw-blocked{color:var(--itw-speech);font-family:'IBM Plex Mono',monospace;font-size:16px;}
+.itw-textin{
+  background:#0d1120;border:1px solid var(--itw-border);color:var(--itw-text);padding:10px 12px;
+  border-radius:6px;font-family:'Inter',sans-serif;font-size:14px;flex:1;min-width:200px;
+  transition:border-color .15s ease;
+}
+.itw-textin:focus-visible{border-color:var(--itw-accent);}
+
+/* accent binding per module */
+.itw-module[data-accent="autism"]{--itw-accent:var(--itw-autism);--itw-accent-soft:var(--itw-autism-soft);}
+.itw-module[data-accent="adhd"]{--itw-accent:var(--itw-adhd);--itw-accent-soft:var(--itw-adhd-soft);}
+.itw-module[data-accent="dyslexia"]{--itw-accent:var(--itw-dyslexia);--itw-accent-soft:var(--itw-dyslexia-soft);}
+.itw-module[data-accent="speech"]{--itw-accent:var(--itw-speech);--itw-accent-soft:var(--itw-speech-soft);}
+
+@media (prefers-reduced-motion: reduce){
+  .itw-root *{animation-duration:.001ms !important;animation-iteration-count:1 !important;}
+  .itw-view, .itw-rise{opacity:1 !important;transform:none !important;}
+}
