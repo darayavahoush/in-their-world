@@ -173,7 +173,7 @@ function speakText(text, { rate = 1, pitch = 1, volume = 0.85 } = {}) {
 const MODULES = [
   {
     key: "autism",
-    tag: "Module 01",
+    tag: "Case File 01",
     name: "Autism",
     blurb: "Sensory processing, filtering, and why a “normal” room can feel like too much.",
     statBig: "1 in 31",
@@ -183,7 +183,7 @@ const MODULES = [
   },
   {
     key: "adhd",
-    tag: "Module 02",
+    tag: "Case File 02",
     name: "ADHD",
     blurb: "What it takes to hold attention on one task while everything else pulls at you.",
     statBig: "11.4%",
@@ -193,7 +193,7 @@ const MODULES = [
   },
   {
     key: "dyslexia",
-    tag: "Module 03",
+    tag: "Case File 03",
     name: "Dyslexia",
     blurb: "Decoding text when letters won't sit still and reading takes real effort, every line.",
     statBig: "15–20%",
@@ -203,7 +203,7 @@ const MODULES = [
   },
   {
     key: "speech",
-    tag: "Module 04",
+    tag: "Case File 04",
     name: "Speech & Language",
     blurb: "Knowing exactly what you want to say — and having the words arrive late, or not at all.",
     statBig: "1 in 12",
@@ -218,7 +218,7 @@ function Landing({ onSelect }) {
   return (
     <section className="itw-view">
       <div className="itw-masthead">
-        <div className="itw-eyebrow itw-rise itw-rise-1">A field guide for parents &amp; teachers</div>
+        <div className="itw-eyebrow itw-rise itw-rise-1">Field observation log — for parents &amp; teachers</div>
         <h1 className="itw-title itw-rise itw-rise-2">
           In their <em>world</em>,<br />for a few minutes.
         </h1>
@@ -249,7 +249,7 @@ function Landing({ onSelect }) {
                 {country === "in" ? m.statRestIN : m.statRest}
               </span>
             </div>
-            <div className="itw-enter">Step in →</div>
+            <div className="itw-enter">Open the file →</div>
           </button>
         ))}
       </div>
@@ -386,6 +386,30 @@ function ModuleShell({ accent, eyebrow, title, dek, onBack, onNavigate, children
   );
 }
 
+/* ---------------- Viewfinder (signature element — the "step into their
+   world" viewport, with a live HUD readout, wraps every sim stage) ---------------- */
+
+function Viewfinder({ hud, stageStyle, children }) {
+  return (
+    <div className="itw-viewfinder">
+      <div className="itw-viewfinder-stage itw-sim-stage" style={stageStyle}>
+        <div className="itw-vf-corner itw-vf-tl" />
+        <div className="itw-vf-corner itw-vf-tr" />
+        <div className="itw-vf-corner itw-vf-bl" />
+        <div className="itw-vf-corner itw-vf-br" />
+        <div className="itw-viewfinder-hud">
+          <span className="itw-hud-rec">
+            <span className="itw-hud-dot" />
+            {(hud && hud.left) || "OBSERVING"}
+          </span>
+          <span>{(hud && hud.right) || ""}</span>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Rating card (shared by every task) ---------------- */
 
 function RatingCard({ title, score, maxScore = 100, lines, retryLabel = "Try again", onRetry }) {
@@ -434,12 +458,26 @@ const NOISE_PHRASES = [
 ];
 const NOISE_COLORS = ["#4fb3a6", "#e8a23d", "#e37b6e", "#a48ce0", "#ffffff"];
 
+const TOTAL_ROUNDS = 5;
+
 function AutismSim() {
   const { soundOn } = useContext(SettingsContext);
-  const [filter, setFilter] = useState(10); // 0 = raw, 100 = filtered
-  const intensity = (100 - filter) / 100;
-  const [roundStart, setRoundStart] = useState(() => performance.now());
+  const [phase, setPhase] = useState("intro"); // intro | task | done
+  const [filter, setFilter] = useState(10); // exploration-only, before the graded task starts
+  const [round, setRound] = useState(0);
+  const [targetPos, setTargetPos] = useState({ top: 50, left: 50 });
+  const [decoys, setDecoys] = useState([]);
+  const [misses, setMisses] = useState(0);
   const [rating, setRating] = useState(null);
+
+  const roundStartRef = useRef(0);
+  const timeAccRef = useRef(0);
+  const missesRef = useRef(0);
+  const decoyIdRef = useRef(0);
+
+  const practiceIntensity = (100 - filter) / 100;
+  const taskIntensity = Math.min(1, 0.3 + (round - 1) * 0.175);
+  const intensity = phase === "task" ? taskIntensity : practiceIntensity;
 
   const noiseItems = useMemo(
     () =>
@@ -468,7 +506,6 @@ function AutismSim() {
     []
   );
 
-  // Ambient sensory drone — louder and harsher as filtering drops.
   useEffect(() => {
     if (!soundOn) {
       audio.stopDrone("autism");
@@ -482,12 +519,12 @@ function AutismSim() {
     audio.setDroneGain("autism", soundOn ? intensity * 0.055 : 0.0001);
   }, [intensity, soundOn]);
 
-  useEffect(() => {
-    if (!rating) setRoundStart(performance.now());
-  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const readout =
-    filter < 25
+    phase === "task"
+      ? round >= 4
+        ? "Full overload — this is what an unfiltered classroom feels like on its worst day. Find the real target anyway."
+        : "Noise climbs every round, on its own. There's no slider now — this is the part that doesn't turn down on demand."
+      : filter < 25
       ? "This is closer to a packed classroom during free time — bright lights, side conversations, a chair scraping."
       : filter < 55
       ? "Partial filtering — like stepping into a slightly quieter hallway, but the noise hasn't gone away."
@@ -495,38 +532,127 @@ function AutismSim() {
       ? "This is closer to what noise-reducing headphones and dimmer lighting can offer."
       : "This is what a genuinely quiet, low-stimulation space feels like — the task hasn't changed, only the ability to focus on it.";
 
-  const findDot = () => {
-    if (rating) return;
-    const elapsed = (performance.now() - roundStart) / 1000;
+  const randPos = (avoid) => {
+    let top, left, ok;
+    do {
+      top = 8 + Math.random() * 76;
+      left = 6 + Math.random() * 80;
+      ok = true;
+      for (const p of avoid) {
+        if (Math.abs(p.top - top) < 17 && Math.abs(p.left - left) < 17) ok = false;
+      }
+    } while (!ok);
+    return { top, left };
+  };
+
+  const setupRound = (roundNum) => {
+    const t = randPos([]);
+    const decoyCount = roundNum >= 3 ? 2 : 1;
+    const avoid = [t];
+    const nd = [];
+    for (let i = 0; i < decoyCount; i++) {
+      const p = randPos(avoid);
+      avoid.push(p);
+      nd.push({ id: decoyIdRef.current++, ...p });
+    }
+    setTargetPos(t);
+    setDecoys(nd);
+    roundStartRef.current = performance.now();
+  };
+
+  const startTask = () => {
+    timeAccRef.current = 0;
+    missesRef.current = 0;
+    setMisses(0);
+    setRating(null);
+    setPhase("task");
+    setRound(1);
+    setupRound(1);
+  };
+
+  const clickTarget = () => {
+    if (phase !== "task") return;
+    const elapsed = (performance.now() - roundStartRef.current) / 1000;
+    timeAccRef.current += elapsed;
     if (soundOn) audio.tone({ freq: 700, type: "sine", duration: 0.16, gain: 0.13 });
-    const speedScore = Math.max(0, 100 - elapsed * 14);
-    const noiseBonus = intensity * 30;
-    const score = Math.round(Math.max(0, Math.min(100, speedScore * 0.7 + noiseBonus)));
-    setRating({ score, elapsed: elapsed.toFixed(1), filterAtFind: filter });
+    if (round >= TOTAL_ROUNDS) {
+      const totalTime = timeAccRef.current;
+      const avgTime = totalTime / TOTAL_ROUNDS;
+      const speedScore = Math.max(0, 100 - avgTime * 20);
+      const missPenalty = missesRef.current * 12;
+      const score = Math.round(Math.max(0, Math.min(100, speedScore - missPenalty + 8)));
+      setPhase("done");
+      setRating({ score, time: totalTime.toFixed(1), misses: missesRef.current });
+    } else {
+      const next = round + 1;
+      setRound(next);
+      setupRound(next);
+    }
+  };
+
+  const clickDecoy = () => {
+    if (phase !== "task") return;
+    missesRef.current += 1;
+    setMisses(missesRef.current);
+    if (soundOn) audio.sweep({ from: 500, to: 150, duration: 0.2, type: "sawtooth", gain: 0.1 });
   };
 
   const retry = () => {
+    setPhase("intro");
+    setRound(0);
     setRating(null);
-    setRoundStart(performance.now());
   };
 
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> find the red dot below and click it, as fast as you can. Then
-        drag the slider and try again — not the task, but everything <em>around</em> it changes.
+        <strong>Task:</strong> five rounds. Each round, find and click the <em>real</em> target,
+        not the decoy — fast. Sensory noise gets worse every round, on its own, whether you're
+        ready or not.
       </div>
-      <div className="itw-sim-stage">
-        <div
-          className="itw-sensory-target"
-          role="button"
-          tabIndex={0}
-          onClick={findDot}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && findDot()}
-        >
-          <div className="itw-dot" />
-          <p>find me</p>
-        </div>
+      <Viewfinder
+        hud={{
+          left: phase === "task" ? `ROUND ${round}/${TOTAL_ROUNDS}` : "STANDBY",
+          right: `${Math.round(intensity * 100)}% NOISE`,
+        }}
+      >
+        {phase !== "task" && (
+          <div
+            className="itw-sensory-target"
+            style={{ top: "50%", left: "50%", transform: "translate(-50%,-50%)", cursor: "default" }}
+          >
+            <div className="itw-dot" />
+            <p>press start below</p>
+          </div>
+        )}
+        {phase === "task" && (
+          <>
+            <div
+              className="itw-sensory-target"
+              role="button"
+              tabIndex={0}
+              style={{ top: `${targetPos.top}%`, left: `${targetPos.left}%` }}
+              onClick={clickTarget}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && clickTarget()}
+            >
+              <div className="itw-dot" />
+              <p>find me</p>
+            </div>
+            {decoys.map((d) => (
+              <div
+                key={d.id}
+                className="itw-decoy-target"
+                role="button"
+                tabIndex={0}
+                style={{ top: `${d.top}%`, left: `${d.left}%` }}
+                onClick={clickDecoy}
+                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && clickDecoy()}
+              >
+                <div className="itw-dot" />
+              </div>
+            ))}
+          </>
+        )}
         {noiseItems.map((n) => (
           <div
             key={n.id}
@@ -558,23 +684,34 @@ function AutismSim() {
           />
         ))}
         <div className="itw-flicker-overlay" style={{ opacity: (intensity * 0.15).toFixed(2) }} />
-      </div>
+      </Viewfinder>
       <div className="itw-sim-controls">
-        <div className="itw-row">
-          <label className="itw-mono" style={{ fontSize: 12, color: "var(--itw-muted)" }}>
-            Unfiltered
-          </label>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={filter}
-            onChange={(e) => setFilter(+e.target.value)}
-          />
-          <label className="itw-mono" style={{ fontSize: 12, color: "var(--itw-muted)" }}>
-            Filtered
-          </label>
-        </div>
+        {phase === "intro" && (
+          <>
+            <button className="itw-btn-primary" onClick={startTask}>
+              Start observation task
+            </button>
+            <div className="itw-row" style={{ flex: "1 1 220px" }}>
+              <label className="itw-mono" style={{ fontSize: 12, color: "var(--itw-muted)" }}>
+                Unfiltered
+              </label>
+              <input type="range" min={0} max={100} value={filter} onChange={(e) => setFilter(+e.target.value)} />
+              <label className="itw-mono" style={{ fontSize: 12, color: "var(--itw-muted)" }}>
+                Filtered
+              </label>
+            </div>
+          </>
+        )}
+        {phase === "task" && (
+          <div className="itw-round-pips">
+            {Array.from({ length: TOTAL_ROUNDS }).map((_, i) => (
+              <span
+                key={i}
+                className={i < round - 1 ? "itw-pip-done" : i === round - 1 ? "itw-pip-current" : ""}
+              />
+            ))}
+          </div>
+        )}
         <div className="itw-readout">{readout}</div>
       </div>
       {rating && (
@@ -582,12 +719,13 @@ function AutismSim() {
           title="Your focus score"
           score={rating.score}
           lines={[
-            `Found it in ${rating.elapsed}s with ${100 - rating.filterAtFind}% raw sensory noise coming through.`,
-            intensity > 0.5
-              ? "Most people slow down noticeably at this level — not from a lack of effort, but because there's simply more to filter before the task can even start."
-              : "At heavier filtering the task barely changes, but access to it gets much easier — that's the whole difference a low-stimulation space can make.",
+            `Cleared all ${TOTAL_ROUNDS} rounds in ${rating.time}s total, with ${rating.misses} decoy click(s).`,
+            rating.misses > 0
+              ? "Every decoy you clicked was a false alarm — that's what a nervous system taking in more than it can filter has to sort through constantly, and still gets wrong sometimes."
+              : "No false alarms, even as the noise climbed toward full overload — run it again and see if that holds.",
           ]}
           onRetry={retry}
+          retryLabel="Run it again"
         />
       )}
     </div>
@@ -598,14 +736,14 @@ function AutismModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="autism"
-      eyebrow="Module 01 — Autism"
+      eyebrow="Case File 01 — Autism"
       title="The room doesn't turn down."
       dek="For many autistic kids, sensory input doesn't fade into the background automatically — the hum of lights, a chair scraping, three conversations at once can all arrive at full volume, all at the same time."
       onBack={onBack}
       onNavigate={onNavigate}
     >
       <section className="itw-block">
-        <div className="itw-block-label">Try it — Sensory Filter</div>
+        <div className="itw-block-label">Try it — Observation Task</div>
         <AutismSim />
       </section>
       <section className="itw-block">
@@ -825,7 +963,7 @@ function AdhdSim() {
         are traps, not the task: clicking one costs you. Toggle distractions on or off and
         compare your time.
       </div>
-      <div className="itw-sim-stage">
+      <Viewfinder hud={{ left: running ? `TARGET ${nextNum}/10` : "READY", right: `MISS ${misses}` }}>
         <div className="itw-focus-field">
           {numbers.map((n) => (
             <button
@@ -850,7 +988,7 @@ function AdhdSim() {
             </div>
           ))}
         </div>
-      </div>
+      </Viewfinder>
       <div className="itw-sim-controls">
         <button className="itw-btn-primary" onClick={startFocus} disabled={running}>
           Start round
@@ -890,7 +1028,7 @@ function AdhdModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="adhd"
-      eyebrow="Module 02 — ADHD"
+      eyebrow="Case File 02 — ADHD"
       title="Attention isn't a switch."
       dek="It's not that kids with ADHD can't focus — it's that their attention responds to whatever is most stimulating in the moment, and staying locked onto one quiet task takes active, exhausting effort."
       onBack={onBack}
@@ -1030,7 +1168,10 @@ function DyslexiaSim() {
           Simulated view
         </button>
       </div>
-      <div className="itw-sim-stage" style={{ minHeight: "auto", background: "var(--itw-panel)" }}>
+      <Viewfinder
+        hud={{ left: mode === "simulated" ? "SIMULATED VIEW" : "TYPICAL VIEW", right: "" }}
+        stageStyle={{ minHeight: "auto", background: "var(--itw-panel)" }}
+      >
         <div className={`itw-reading-passage${mode === "simulated" ? " itw-simulated" : ""}`}>
           {chars.map((ch, i) => (
             <span className="itw-ch" key={i} style={{ animationDelay: `${(i % 12) * 0.18}s` }}>
@@ -1038,7 +1179,7 @@ function DyslexiaSim() {
             </span>
           ))}
         </div>
-      </div>
+      </Viewfinder>
       <div className="itw-sim-controls">
         <button className="itw-btn-primary" onClick={finishReading}>
           I've finished reading
@@ -1062,7 +1203,7 @@ function DyslexiaModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="dyslexia"
-      eyebrow="Module 03 — Dyslexia"
+      eyebrow="Case File 03 — Dyslexia"
       title="Smart, and still stuck on the sentence."
       dek="Dyslexia isn't about seeing letters backwards — it's a difference in how the brain connects written symbols to sounds. Comprehension is usually fine. Decoding the words to get there is the hard part."
       onBack={onBack}
@@ -1218,14 +1359,17 @@ function SpeechSim() {
         “Say it.” It'll actually be spoken aloud (turn sound on) — watch, and listen to, what
         happens on the way out.
       </div>
-      <div className="itw-sim-stage" style={{ minHeight: "auto" }}>
+      <Viewfinder
+        hud={{ left: running ? "SPEAKING…" : "READY", right: "" }}
+        stageStyle={{ minHeight: "auto" }}
+      >
         <div className="itw-speech-scene">
           <div className="itw-scene-emoji">🎂🎈🎁</div>
           <div className={`itw-speech-face${face === "blocked" ? " itw-straining" : ""}`}>
             {face === "blocked" ? "😣" : face === "talking" ? "🗣️" : face === "done" ? "🙂" : "😐"}
           </div>
         </div>
-      </div>
+      </Viewfinder>
       <div className="itw-sim-controls" style={{ borderTop: "1px solid var(--itw-border)" }}>
         <input
           type="text"
@@ -1268,7 +1412,7 @@ function SpeechModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="speech"
-      eyebrow="Module 04 — Speech & Language"
+      eyebrow="Case File 04 — Speech & Language"
       title="The word is there. It's just not arriving yet."
       dek="For kids with speech sound disorders, stuttering, or word-finding difficulties, the thought is usually fully formed — the gap is between knowing what to say and getting it out cleanly."
       onBack={onBack}
