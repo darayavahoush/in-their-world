@@ -271,3 +271,46 @@
   .itw-root *{animation-duration:.001ms !important;animation-iteration-count:1 !important;}
   .itw-view, .itw-rise{opacity:1 !important;transform:none !important;}
 }
+
+/* ================= Settings bar (sound + stats region) ================= */
+.itw-settings-bar{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;
+  padding:14px 0;margin-bottom:4px;
+}
+.itw-toggle-btn{
+  background:var(--itw-panel);border:1px solid var(--itw-border);color:var(--itw-text);
+  padding:7px 13px;border-radius:20px;font-size:12.5px;cursor:pointer;transition:border-color .15s ease, color .15s ease;
+}
+.itw-toggle-btn.itw-active{border-color:var(--itw-accent);color:var(--itw-accent);}
+.itw-toggle-btn:not(.itw-active){color:var(--itw-muted);}
+.itw-country-toggle{
+  display:flex;background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:20px;
+  padding:3px;gap:2px;
+}
+.itw-country-toggle button{
+  background:none;border:none;color:var(--itw-muted);padding:6px 12px;border-radius:16px;
+  font-size:12.5px;cursor:pointer;transition:background .15s ease, color .15s ease;
+}
+.itw-country-toggle button.itw-active{background:var(--itw-accent-soft);color:var(--itw-accent);}
+
+/* ================= Rating card ================= */
+.itw-rating-card{
+  margin:0 18px 20px;padding:18px 20px;border:1px solid var(--itw-accent);border-radius:10px;
+  background:var(--itw-accent-soft);animation:itw-rating-in .35s ease both;
+}
+@keyframes itw-rating-in{
+  from{opacity:0;transform:translateY(6px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.itw-rating-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px;}
+.itw-rating-title{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--itw-muted);margin-bottom:4px;}
+.itw-rating-stars{color:var(--itw-accent);font-size:17px;letter-spacing:2px;}
+.itw-rating-score{font-family:'IBM Plex Mono',monospace;font-size:28px;color:var(--itw-text);line-height:1;}
+.itw-rating-score span{font-size:14px;color:var(--itw-muted);}
+.itw-rating-lines{margin:0 0 14px;padding-left:18px;color:var(--itw-text);font-size:14px;line-height:1.5;}
+.itw-rating-lines li{margin-bottom:6px;}
+.itw-rating-lines li:last-child{margin-bottom:0;}
+.itw-rating-retry{font-size:12.5px;padding:7px 14px;}
+
+/* Sensory target should read as clickable now that it's the task */
+.itw-sensory-target{cursor:pointer;}

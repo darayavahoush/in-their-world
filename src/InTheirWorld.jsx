@@ -1,11 +1,21 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  useContext,
+  createContext,
+} from "react";
 import "./InTheirWorld.css";
 
 /* ============================================================
    In Their World
    A field guide for parents & teachers — four short interactive
-   simulations (autism, ADHD, dyslexia, speech/language) plus
-   real prevalence data and practical strategies.
+   simulations (autism, ADHD, dyslexia, speech/language), each
+   framed as a task you attempt and get rated on, with synthesized
+   ambient audio, plus real prevalence data (US/global AND India)
+   and practical strategies.
 
    Drop-in usage:
      import InTheirWorld from "./InTheirWorld";
@@ -22,6 +32,129 @@ const ACCENT_HEX = {
   speech: "227,123,110",
 };
 
+/* ---------------- Settings context (sound + stats region) ---------------- */
+
+const SettingsContext = createContext({ soundOn: true, country: "us" });
+
+/* ---------------- Audio engine (Web Audio API, no external assets) ---------------- */
+
+class AudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.master = null;
+    this.drones = new Map();
+  }
+
+  ensure() {
+    if (!this.ctx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      this.ctx = new Ctx();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.55;
+      this.master.connect(this.ctx.destination);
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    return this.ctx;
+  }
+
+  tone({ freq = 440, type = "sine", duration = 0.2, gain = 0.14, detune = 0, delay = 0 } = {}) {
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.detune.value = detune;
+    g.gain.value = 0;
+    osc.connect(g);
+    g.connect(this.master);
+    const start = ctx.currentTime + delay;
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(gain, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    osc.start(start);
+    osc.stop(start + duration + 0.05);
+  }
+
+  sweep({ from = 800, to = 200, duration = 0.35, type = "sawtooth", gain = 0.12 } = {}) {
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(from, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(30, to), ctx.currentTime + duration);
+    g.gain.value = 0;
+    osc.connect(g);
+    g.connect(this.master);
+    g.gain.linearRampToValueAtTime(gain, ctx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+    osc.start();
+    osc.stop(ctx.currentTime + duration + 0.05);
+  }
+
+  noiseBurst({ duration = 0.25, gain = 0.09, filterFreq = 1800, type = "bandpass" } = {}) {
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const filt = ctx.createBiquadFilter();
+    filt.type = type;
+    filt.frequency.value = filterFreq;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.connect(filt);
+    filt.connect(g);
+    g.connect(this.master);
+    src.start();
+  }
+
+  startDrone(id, { freqs = [110, 165], type = "sawtooth" } = {}) {
+    const ctx = this.ensure();
+    if (!ctx || this.drones.has(id)) return;
+    const g = ctx.createGain();
+    g.gain.value = 0.0001;
+    g.connect(this.master);
+    const oscs = freqs.map((f) => {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.value = f;
+      o.connect(g);
+      o.start();
+      return o;
+    });
+    this.drones.set(id, { g, oscs });
+  }
+
+  setDroneGain(id, value) {
+    const d = this.drones.get(id);
+    if (!d) return;
+    const ctx = this.ctx;
+    if (!ctx) return;
+    d.g.gain.linearRampToValueAtTime(Math.max(0.0001, value), ctx.currentTime + 0.15);
+  }
+
+  stopDrone(id) {
+    const d = this.drones.get(id);
+    if (!d) return;
+    d.oscs.forEach((o) => {
+      try {
+        o.stop();
+      } catch (e) {
+        /* already stopped */
+      }
+    });
+    this.drones.delete(id);
+  }
+}
+
+const audio = new AudioEngine();
+
 /* ---------------- Landing ---------------- */
 
 const MODULES = [
@@ -32,6 +165,8 @@ const MODULES = [
     blurb: "Sensory processing, filtering, and why a “normal” room can feel like too much.",
     statBig: "1 in 31",
     statRest: "8-year-olds in the US (CDC, 2022 data)",
+    statBigIN: "~1 in 100",
+    statRestIN: "children under 10 in India (INCLEN Trust, PLOS Medicine)",
   },
   {
     key: "adhd",
@@ -40,6 +175,8 @@ const MODULES = [
     blurb: "What it takes to hold attention on one task while everything else pulls at you.",
     statBig: "11.4%",
     statRest: "of US children, ever diagnosed (CDC, 2022)",
+    statBigIN: "~7.1%",
+    statRestIN: "pooled prevalence, Indian children & adolescents (19-study meta-analysis)",
   },
   {
     key: "dyslexia",
@@ -48,6 +185,8 @@ const MODULES = [
     blurb: "Decoding text when letters won't sit still and reading takes real effort, every line.",
     statBig: "15–20%",
     statRest: "show signs of dyslexia (Intl. Dyslexia Assoc.)",
+    statBigIN: "10–15%",
+    statRestIN: "of Indian children, estimated dyslexic (Dyslexia Association of India)",
   },
   {
     key: "speech",
@@ -56,10 +195,13 @@ const MODULES = [
     blurb: "Knowing exactly what you want to say — and having the words arrive late, or not at all.",
     statBig: "1 in 12",
     statRest: "kids, voice/speech/language disorder (NIDCD)",
+    statBigIN: "~1 in 11",
+    statRestIN: "at-risk children found to have one on evaluation (Indian rural screening study)",
   },
 ];
 
 function Landing({ onSelect }) {
+  const { country } = useContext(SettingsContext);
   return (
     <section className="itw-view">
       <div className="itw-masthead">
@@ -70,7 +212,8 @@ function Landing({ onSelect }) {
         <p className="itw-lede itw-rise itw-rise-3">
           Four short, interactive experiences that simulate what focus, reading, sensory
           input, and speaking out loud can feel like for kids with autism, ADHD, dyslexia,
-          or a speech difference — paired with the real data and practical steps that follow.
+          or a speech difference — each one a small task you attempt and get rated on,
+          paired with real data and practical steps that follow.
         </p>
         <div className="itw-disclaimer itw-rise itw-rise-4">
           <strong>Before you start:</strong> these simulations are approximations, built to
@@ -88,7 +231,10 @@ function Landing({ onSelect }) {
             <h3>{m.name}</h3>
             <p>{m.blurb}</p>
             <div className="itw-stat">
-              <b>{m.statBig}</b> <span style={{ color: "var(--itw-muted)" }}>{m.statRest}</span>
+              <b>{country === "in" ? m.statBigIN : m.statBig}</b>{" "}
+              <span style={{ color: "var(--itw-muted)" }}>
+                {country === "in" ? m.statRestIN : m.statRest}
+              </span>
             </div>
             <div className="itw-enter">Step in →</div>
           </button>
@@ -96,15 +242,52 @@ function Landing({ onSelect }) {
       </div>
 
       <div className="itw-foot-note">
-        Built as an awareness &amp; training tool. Statistics are drawn from CDC, NIDCD,
-        ASHA, and the International Dyslexia Association, and are approximate — prevalence
-        estimates shift as diagnostic criteria and access to evaluation change.
+        Built as an awareness &amp; training tool. Global/US statistics are drawn from CDC,
+        NIDCD, ASHA, and the International Dyslexia Association; India statistics are drawn
+        from peer-reviewed Indian epidemiological studies and meta-analyses. All figures are
+        approximate — prevalence estimates shift as diagnostic criteria, screening access,
+        and study methodology change, and vary further by region within each country.
       </div>
     </section>
   );
 }
 
 /* ---------------- Shared module shell ---------------- */
+
+function SettingsBar({ soundOn, setSoundOn, country, setCountry }) {
+  return (
+    <div className="itw-settings-bar">
+      <button
+        type="button"
+        className={`itw-toggle-btn${soundOn ? " itw-active" : ""}`}
+        aria-pressed={soundOn}
+        onClick={() => setSoundOn((v) => !v)}
+      >
+        {soundOn ? "🔊 Sound on" : "🔇 Sound off"}
+      </button>
+      <div className="itw-country-toggle" role="tablist" aria-label="Statistics region">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={country === "us"}
+          className={country === "us" ? "itw-active" : ""}
+          onClick={() => setCountry("us")}
+        >
+          🌍 US / Global
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={country === "in"}
+          className={country === "in" ? "itw-active" : ""}
+          onClick={() => setCountry("in")}
+        >
+          🇮🇳 India
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function StrategyTabs({ home, classroom }) {
   const [tab, setTab] = useState("home");
@@ -133,7 +316,10 @@ function StrategyTabs({ home, classroom }) {
   );
 }
 
-function FactsGrid({ facts, note }) {
+function FactsGrid({ factsUS, factsIN, note, noteIN }) {
+  const { country } = useContext(SettingsContext);
+  const facts = country === "in" && factsIN ? factsIN : factsUS;
+  const shownNote = country === "in" && noteIN ? noteIN : note;
   return (
     <>
       <div className="itw-facts-grid">
@@ -145,7 +331,7 @@ function FactsGrid({ facts, note }) {
           </div>
         ))}
       </div>
-      {note && <p className="itw-fact-note">{note}</p>}
+      {shownNote && <p className="itw-fact-note">{shownNote}</p>}
     </>
   );
 }
@@ -187,6 +373,42 @@ function ModuleShell({ accent, eyebrow, title, dek, onBack, onNavigate, children
   );
 }
 
+/* ---------------- Rating card (shared by every task) ---------------- */
+
+function RatingCard({ title, score, maxScore = 100, lines, retryLabel = "Try again", onRetry }) {
+  const pct = Math.max(0, Math.min(100, Math.round((score / maxScore) * 100)));
+  const stars = Math.max(1, Math.min(5, Math.round(pct / 20)));
+  useEffect(() => {
+    audio.tone({ freq: 523, type: "sine", duration: 0.16, gain: 0.1 });
+    audio.tone({ freq: 659, type: "sine", duration: 0.2, gain: 0.09, delay: 0.09 });
+  }, []);
+  return (
+    <div className="itw-rating-card" role="status">
+      <div className="itw-rating-top">
+        <div>
+          <div className="itw-rating-title">{title}</div>
+          <div className="itw-rating-stars" aria-hidden="true">
+            {"★".repeat(stars)}
+            {"☆".repeat(5 - stars)}
+          </div>
+        </div>
+        <div className="itw-rating-score">
+          {Math.round(score)}
+          <span>/{maxScore}</span>
+        </div>
+      </div>
+      <ul className="itw-rating-lines">
+        {lines.map((l, i) => (
+          <li key={i}>{l}</li>
+        ))}
+      </ul>
+      <button className="itw-btn-ghost itw-rating-retry" onClick={onRetry}>
+        {retryLabel}
+      </button>
+    </div>
+  );
+}
+
 /* ================= AUTISM: sensory overload simulator ================= */
 
 const NOISE_PHRASES = [
@@ -198,8 +420,11 @@ const NOISE_PHRASES = [
 const NOISE_COLORS = ["#4fb3a6", "#e8a23d", "#e37b6e", "#a48ce0", "#ffffff"];
 
 function AutismSim() {
+  const { soundOn } = useContext(SettingsContext);
   const [filter, setFilter] = useState(10); // 0 = raw, 100 = filtered
   const intensity = (100 - filter) / 100;
+  const [roundStart, setRoundStart] = useState(() => performance.now());
+  const [rating, setRating] = useState(null);
 
   const noiseItems = useMemo(
     () =>
@@ -228,6 +453,24 @@ function AutismSim() {
     []
   );
 
+  // Ambient sensory drone — louder and harsher as filtering drops.
+  useEffect(() => {
+    if (!soundOn) {
+      audio.stopDrone("autism");
+      return;
+    }
+    audio.startDrone("autism", { freqs: [98, 147, 201, 302], type: "sawtooth" });
+    return () => audio.stopDrone("autism");
+  }, [soundOn]);
+
+  useEffect(() => {
+    audio.setDroneGain("autism", soundOn ? intensity * 0.055 : 0.0001);
+  }, [intensity, soundOn]);
+
+  useEffect(() => {
+    if (!rating) setRoundStart(performance.now());
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const readout =
     filter < 25
       ? "This is closer to a packed classroom during free time — bright lights, side conversations, a chair scraping."
@@ -237,14 +480,35 @@ function AutismSim() {
       ? "This is closer to what noise-reducing headphones and dimmer lighting can offer."
       : "This is what a genuinely quiet, low-stimulation space feels like — the task hasn't changed, only the ability to focus on it.";
 
+  const findDot = () => {
+    if (rating) return;
+    const elapsed = (performance.now() - roundStart) / 1000;
+    if (soundOn) audio.tone({ freq: 700, type: "sine", duration: 0.16, gain: 0.13 });
+    const speedScore = Math.max(0, 100 - elapsed * 14);
+    const noiseBonus = intensity * 30;
+    const score = Math.round(Math.max(0, Math.min(100, speedScore * 0.7 + noiseBonus)));
+    setRating({ score, elapsed: elapsed.toFixed(1), filterAtFind: filter });
+  };
+
+  const retry = () => {
+    setRating(null);
+    setRoundStart(performance.now());
+  };
+
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        Find the red dot in the scene below. Then drag the slider and watch what changes —
-        not the task, but everything <em>around</em> it.
+        <strong>Task:</strong> find the red dot below and click it, as fast as you can. Then
+        drag the slider and try again — not the task, but everything <em>around</em> it changes.
       </div>
       <div className="itw-sim-stage">
-        <div className="itw-sensory-target">
+        <div
+          className="itw-sensory-target"
+          role="button"
+          tabIndex={0}
+          onClick={findDot}
+          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && findDot()}
+        >
           <div className="itw-dot" />
           <p>find me</p>
         </div>
@@ -298,6 +562,19 @@ function AutismSim() {
         </div>
         <div className="itw-readout">{readout}</div>
       </div>
+      {rating && (
+        <RatingCard
+          title="Your focus score"
+          score={rating.score}
+          lines={[
+            `Found it in ${rating.elapsed}s with ${100 - rating.filterAtFind}% raw sensory noise coming through.`,
+            intensity > 0.5
+              ? "Most people slow down noticeably at this level — not from a lack of effort, but because there's simply more to filter before the task can even start."
+              : "At heavier filtering the task barely changes, but access to it gets much easier — that's the whole difference a low-stimulation space can make.",
+          ]}
+          onRetry={retry}
+        />
+      )}
     </div>
   );
 }
@@ -319,12 +596,18 @@ function AutismModule({ onBack, onNavigate }) {
       <section className="itw-block">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          facts={[
+          factsUS={[
             { num: "1 in 31", label: "8-year-olds in the US identified with autism spectrum disorder", src: "CDC ADDM Network, 2022 data (released 2025)" },
             { num: "~90%", label: "of autistic people report sensory sensitivities — sound, light, texture, or touch", src: "Commonly cited across sensory-processing research" },
             { num: "4:1", label: "boys diagnosed for every girl — though many researchers believe girls are underdiagnosed, not less affected", src: "CDC ADDM Network" },
           ]}
+          factsIN={[
+            { num: "~1 in 100", label: "children under age 10 in India may have autism, per a large community-based sample", src: "INCLEN Trust study, PLOS Medicine" },
+            { num: "0.4–1.8%", label: "regional spread found across India, from urban North Goa to rural Palwal, Haryana", src: "INCLEN Trust study, PLOS Medicine" },
+            { num: "1 in 8", label: "children in the same sample had at least one neurodevelopmental condition of any kind", src: "INCLEN Trust study, PLOS Medicine" },
+          ]}
           note="Sensory overload isn't a behavior problem — it's a nervous system taking in more raw input than it can sort through in real time. What looks like “not listening” or “melting down” is often a filtering system working overtime."
+          noteIN="India's 2011 census recorded autism at a fraction of this rate — researchers call that a large undercount, driven by limited screening access and stigma that keeps families from seeking evaluation, not by a genuinely lower rate of autism."
         />
       </section>
       <section className="itw-block">
@@ -357,6 +640,7 @@ const DISTRACT_MSGS = [
 ];
 
 function AdhdSim() {
+  const { soundOn } = useContext(SettingsContext);
   const [numbers, setNumbers] = useState([]); // {num, top, left, status: 'pending'|'done'|'miss'}
   const [nextNum, setNextNum] = useState(1);
   const [misses, setMisses] = useState(0);
@@ -364,6 +648,7 @@ function AdhdSim() {
   const [distractOn, setDistractOn] = useState(true);
   const [distractions, setDistractions] = useState([]); // {id, text, top, left, opacity}
   const [readout, setReadout] = useState("Ready when you are.");
+  const [rating, setRating] = useState(null);
 
   const startTimeRef = useRef(0);
   const distractIntervalRef = useRef(null);
@@ -378,6 +663,19 @@ function AdhdSim() {
 
   useEffect(() => clearAllTimers, [clearAllTimers]);
 
+  useEffect(() => {
+    audio.setDroneGain("adhd", soundOn && running ? 0.025 : 0.0001);
+  }, [soundOn, running]);
+
+  useEffect(() => {
+    if (!soundOn) {
+      audio.stopDrone("adhd");
+      return;
+    }
+    audio.startDrone("adhd", { freqs: [220, 330], type: "triangle" });
+    return () => audio.stopDrone("adhd");
+  }, [soundOn]);
+
   const spawnDistraction = useCallback(() => {
     const id = distractIdRef.current++;
     const d = {
@@ -388,6 +686,7 @@ function AdhdSim() {
       opacity: 0,
     };
     setDistractions((prev) => [...prev, d]);
+    if (soundOn) audio.noiseBurst({ duration: 0.12, gain: 0.05, filterFreq: 2400 });
     // fade in
     const t1 = setTimeout(() => {
       setDistractions((prev) => prev.map((x) => (x.id === id ? { ...x, opacity: 1 } : x)));
@@ -401,7 +700,7 @@ function AdhdSim() {
       timeoutsRef.current.push(t3);
     }, 1300);
     timeoutsRef.current.push(t1, t2);
-  }, []);
+  }, [soundOn]);
 
   const startFocus = () => {
     clearAllTimers();
@@ -409,6 +708,7 @@ function AdhdSim() {
     setMisses(0);
     setNextNum(1);
     setRunning(true);
+    setRating(null);
     setReadout("Go — click 1 first.");
 
     const positions = [];
@@ -438,6 +738,7 @@ function AdhdSim() {
     if (!running) return;
     if (num !== nextNum) {
       setMisses((m) => m + 1);
+      if (soundOn) audio.sweep({ from: 300, to: 120, duration: 0.18, type: "square", gain: 0.09 });
       setNumbers((prev) => prev.map((n) => (n.num === num ? { ...n, status: "miss" } : n)));
       const t = setTimeout(() => {
         setNumbers((prev) => prev.map((n) => (n.num === num ? { ...n, status: "pending" } : n)));
@@ -445,6 +746,7 @@ function AdhdSim() {
       timeoutsRef.current.push(t);
       return;
     }
+    if (soundOn) audio.tone({ freq: 420 + num * 30, type: "sine", duration: 0.12, gain: 0.11 });
     setNumbers((prev) => prev.map((n) => (n.num === num ? { ...n, status: "done" } : n)));
     const next = nextNum + 1;
     setNextNum(next);
@@ -452,18 +754,19 @@ function AdhdSim() {
       clearAllTimers();
       setDistractions([]);
       setRunning(false);
-      const time = ((performance.now() - startTimeRef.current) / 1000).toFixed(1);
-      setReadout(
-        `Done in ${time}s, with ${misses} misclick(s). Try again with distractions off to compare.`
-      );
+      const time = (performance.now() - startTimeRef.current) / 1000;
+      setReadout(`Done in ${time.toFixed(1)}s, with ${misses} misclick(s).`);
+      const penalty = misses * 9 + Math.max(0, time - 6) * 4;
+      const score = Math.round(Math.max(0, Math.min(100, 100 - penalty)));
+      setRating({ score, time: time.toFixed(1), misses, distractOn });
     }
   };
 
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        Click the numbers 1 through 8, in order, as fast as you can. Toggle distractions on
-        or off and compare your time.
+        <strong>Task:</strong> click the numbers 1 through 8, in order, as fast as you can.
+        Toggle distractions on or off and compare your time.
       </div>
       <div className="itw-sim-stage">
         <div className="itw-focus-field">
@@ -505,6 +808,22 @@ function AdhdSim() {
         </label>
         <div className="itw-readout">{readout}</div>
       </div>
+      {rating && (
+        <RatingCard
+          title="Your task-completion score"
+          score={rating.score}
+          lines={[
+            `Finished in ${rating.time}s with ${rating.misses} misclick(s), distractions ${
+              rating.distractOn ? "on" : "off"
+            }.`,
+            rating.distractOn
+              ? "Run it again with distractions off — most people finish faster and cleaner. That gap is roughly what constant, unfiltered pulls on attention cost, on every task, all day."
+              : "Now try it again with distractions on, and compare. The task never changed — only how much of your attention it was allowed to keep.",
+          ]}
+          onRetry={startFocus}
+          retryLabel="Run it again"
+        />
+      )}
     </div>
   );
 }
@@ -526,12 +845,18 @@ function AdhdModule({ onBack, onNavigate }) {
       <section className="itw-block">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          facts={[
+          factsUS={[
             { num: "11.4%", label: "of US children aged 3–17 have ever been diagnosed with ADHD — about 1 in 9", src: "CDC / 2022 National Survey of Children's Health" },
             { num: "~78%", label: "of kids with ADHD have at least one co-occurring condition, most often anxiety", src: "CDC, 2022" },
             { num: "3–4", label: "students in a class of 30 are statistically likely to have an ADHD diagnosis", src: "Extrapolated from CDC prevalence data" },
           ]}
+          factsIN={[
+            { num: "~7.1%", label: "pooled prevalence of ADHD among Indian children & adolescents, across 19 studies", src: "Indian systematic review & meta-analysis" },
+            { num: "9.4% vs 5.2%", label: "prevalence among boys versus girls in the same pooled Indian data", src: "Indian systematic review & meta-analysis" },
+            { num: "2–3", label: "students in a class of 30 are statistically likely to have ADHD, by the pooled Indian estimate", src: "Extrapolated from meta-analysis data" },
+          ]}
           note="ADHD is a difference in how the brain regulates attention and impulse — not a lack of willpower. A distraction-heavy environment doesn't cause ADHD, but it makes the same task measurably harder to finish."
+          noteIN="Individual Indian studies range widely — from about 2% in some community samples up to nearly 29% in others — reflecting differences in screening tools, region, and setting rather than a single settled national rate."
         />
       </section>
       <section className="itw-block">
@@ -563,26 +888,33 @@ const READING_TEXT =
 const SWAP_PAIRS = { b: "d", d: "b", p: "q", q: "p" };
 
 function DyslexiaSim() {
+  const { soundOn } = useContext(SettingsContext);
   const [mode, setMode] = useState("typical");
   const [chars, setChars] = useState(() => READING_TEXT.split(""));
   const [readout, setReadout] = useState("Timer will start once you pick a view.");
+  const [rating, setRating] = useState(null);
+  const timesRef = useRef({ typical: null, simulated: null });
   const readStartRef = useRef(performance.now());
   const intervalRef = useRef(null);
 
   useEffect(() => {
     clearInterval(intervalRef.current);
+    setRating(null);
     if (mode === "simulated") {
       intervalRef.current = setInterval(() => {
+        let swapped = false;
         setChars(
           READING_TEXT.split("").map((orig) => {
             const lower = orig.toLowerCase();
             if (SWAP_PAIRS[lower] && Math.random() < 0.35) {
-              const swapped = SWAP_PAIRS[lower];
-              return orig === lower ? swapped : swapped.toUpperCase();
+              swapped = true;
+              const s = SWAP_PAIRS[lower];
+              return orig === lower ? s : s.toUpperCase();
             }
             return orig;
           })
         );
+        if (swapped && soundOn) audio.noiseBurst({ duration: 0.05, gain: 0.03, filterFreq: 3200 });
       }, 700);
       setReadout("Simulated view — timer running…");
     } else {
@@ -591,21 +923,40 @@ function DyslexiaSim() {
     }
     readStartRef.current = performance.now();
     return () => clearInterval(intervalRef.current);
-  }, [mode]);
+  }, [mode, soundOn]);
 
   const finishReading = () => {
-    const t = ((performance.now() - readStartRef.current) / 1000).toFixed(1);
+    const t = (performance.now() - readStartRef.current) / 1000;
     clearInterval(intervalRef.current);
+    timesRef.current[mode] = t;
+    if (soundOn) audio.tone({ freq: 480, type: "sine", duration: 0.2, gain: 0.1 });
     setReadout(
-      `${t}s in ${mode} view. Many dyslexic readers take noticeably longer in real reading, every single time, on every page — not because they didn't understand, but because decoding takes real, repeated effort.`
+      `${t.toFixed(1)}s in ${mode} view. Many dyslexic readers take noticeably longer in real reading, every single time, on every page — not because they didn't understand, but because decoding takes real, repeated effort.`
     );
+    const { typical, simulated } = timesRef.current;
+    const lines = [`Finished the passage in ${t.toFixed(1)}s in ${mode} view.`];
+    let score;
+    if (typical != null && simulated != null) {
+      const ratio = simulated / typical;
+      score = Math.round(Math.max(30, Math.min(100, 100 - (ratio - 1) * 25)));
+      lines.push(
+        `The simulated view took ${ratio.toFixed(1)}× as long as the typical one for you — a gap dyslexic readers live with on every page, not just this one passage.`
+      );
+      lines.push(
+        "This isn't a comprehension score — reading speed and understanding are different skills, and a slow, careful reader can understand everything just as well."
+      );
+    } else {
+      score = Math.round(Math.max(40, Math.min(100, 100 - t * 2)));
+      lines.push(`Try the other view now, so the comparison actually means something.`);
+    }
+    setRating({ score, lines });
   };
 
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        Read the passage below, then click “I've finished reading.” Try the typical view
-        first, then switch to simulated and compare.
+        <strong>Task:</strong> read the passage below, then click “I've finished reading.” Try
+        the typical view first, then switch to simulated and compare.
       </div>
       <div className="itw-strat-tabs" style={{ padding: "16px 18px 0" }}>
         <button
@@ -636,6 +987,15 @@ function DyslexiaSim() {
         </button>
         <div className="itw-readout">{readout}</div>
       </div>
+      {rating && (
+        <RatingCard
+          title="Your reading-pace score"
+          score={rating.score}
+          lines={rating.lines}
+          onRetry={() => setRating(null)}
+          retryLabel="Keep comparing"
+        />
+      )}
     </div>
   );
 }
@@ -657,12 +1017,18 @@ function DyslexiaModule({ onBack, onNavigate }) {
       <section className="itw-block">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          facts={[
+          factsUS={[
             { num: "15–20%", label: "of the population shows some signs of dyslexia", src: "International Dyslexia Association" },
             { num: "~80%", label: "of all diagnosed learning disabilities are dyslexia — it's the most common one by far", src: "Intl. Dyslexia Association" },
             { num: "40–60%", label: "chance a child has dyslexia if a parent does — it runs strongly in families", src: "Yale Center for Dyslexia & Creativity" },
           ]}
+          factsIN={[
+            { num: "10–15%", label: "of Indian children are estimated to be dyslexic", src: "Dyslexia Association of India" },
+            { num: "6.2%", label: "pooled prevalence of dyslexia specifically, from a meta-analysis of Indian studies", src: "Indian systematic review & meta-analysis, 2022" },
+            { num: "~80%", label: "of specific learning disorders diagnosed in India are dyslexia, same as the global pattern", src: "Indian systematic review, 2023" },
+          ]}
           note="A dyslexic child who reads slowly and understands nothing on a timed test may understand everything when given more time or the text read aloud. Speed of decoding and strength of comprehension are two different skills."
+          noteIN="India's pooled estimate for all learning disabilities combined (reading, writing, and math difficulties together) runs around 10.7% of school-age children — individual Indian studies range from about 2% to over 30% depending on region and screening method."
         />
       </section>
       <section className="itw-block">
@@ -689,10 +1055,12 @@ function DyslexiaModule({ onBack, onNavigate }) {
 /* ================= SPEECH: word-finding simulator ================= */
 
 function SpeechSim() {
+  const { soundOn } = useContext(SettingsContext);
   const [inputVal, setInputVal] = useState("");
   const [outputWords, setOutputWords] = useState([]); // {text, blocked}
   const [running, setRunning] = useState(false);
   const [readout, setReadout] = useState("");
+  const [rating, setRating] = useState(null);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -708,22 +1076,26 @@ function SpeechSim() {
       return;
     }
     setRunning(true);
+    setRating(null);
     setOutputWords([]);
     cancelledRef.current = false;
 
     const words = value.split(/\s+/);
     const start = performance.now();
+    let blockedCount = 0;
 
     for (const w of words) {
       if (cancelledRef.current) return;
       const blockChance = w.length > 4 ? 0.45 : 0.2;
       if (Math.random() < blockChance) {
+        blockedCount++;
         const syll = w.slice(0, Math.min(2, w.length));
         const reps = 2 + Math.floor(Math.random() * 3);
         setOutputWords((prev) => [...prev, { text: syll + "-", blocked: true }]);
         for (let i = 0; i < reps; i++) {
           if (cancelledRef.current) return;
           const stutter = syll + "-".repeat((i % 2) + 1);
+          if (soundOn) audio.sweep({ from: 220, to: 260, duration: 0.12, type: "square", gain: 0.07 });
           setOutputWords((prev) => {
             const copy = [...prev];
             copy[copy.length - 1] = { text: stutter, blocked: true };
@@ -733,29 +1105,42 @@ function SpeechSim() {
         }
         await sleep(300);
         if (cancelledRef.current) return;
+        if (soundOn) audio.tone({ freq: 540, type: "sine", duration: 0.14, gain: 0.1 });
         setOutputWords((prev) => {
           const copy = [...prev];
           copy[copy.length - 1] = { text: w, blocked: false };
           return copy;
         });
       } else {
+        if (soundOn) audio.tone({ freq: 340, type: "sine", duration: 0.08, gain: 0.06 });
         setOutputWords((prev) => [...prev, { text: w, blocked: false }]);
         await sleep(120);
       }
     }
 
-    const total = ((performance.now() - start) / 1000).toFixed(1);
+    const total = (performance.now() - start) / 1000;
     setReadout(
-      `That took ${total}s to say out loud. You knew the whole sentence the second you typed it — that gap between knowing and saying is what a speech or word-finding difference can feel like, every single sentence, all day.`
+      `That took ${total.toFixed(1)}s to say out loud. You knew the whole sentence the second you typed it — that gap between knowing and saying is what a speech or word-finding difference can feel like, every single sentence, all day.`
     );
+    const idealTime = words.length * 0.35;
+    const score = Math.round(Math.max(20, Math.min(100, 100 - (total - idealTime) * 6)));
+    setRating({
+      score,
+      lines: [
+        `${blockedCount} of ${words.length} word(s) blocked before coming out, taking ${total.toFixed(1)}s total.`,
+        blockedCount > 0
+          ? "Every block above was a word you already knew — the delay was entirely in getting it out, not in thinking of it."
+          : "This run had no blocks — try a longer or wordier sentence and see how the odds change.",
+      ],
+    });
     setRunning(false);
   };
 
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        Type a short sentence describing the scene below, then click “Say it.” Watch what
-        happens on the way out.
+        <strong>Task:</strong> type a short sentence describing the scene below, then click
+        “Say it.” Watch what happens on the way out.
       </div>
       <div className="itw-sim-stage" style={{ minHeight: "auto" }}>
         <div className="itw-speech-scene">🎂🎈🎁</div>
@@ -784,6 +1169,15 @@ function SpeechSim() {
         <div className="itw-readout" style={{ marginTop: 10 }}>
           {readout}
         </div>
+        {rating && (
+          <RatingCard
+            title="Your delivery score"
+            score={rating.score}
+            lines={rating.lines}
+            onRetry={() => setRating(null)}
+            retryLabel="Try another sentence"
+          />
+        )}
       </div>
     </div>
   );
@@ -806,12 +1200,18 @@ function SpeechModule({ onBack, onNavigate }) {
       <section className="itw-block">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          facts={[
+          factsUS={[
             { num: "~1 in 12", label: "US children ages 3–17 have had a voice, speech, or language disorder", src: "NIDCD / NIH" },
             { num: "7%", label: "of children have a developmental language disorder — about 1 in 14", src: "NIDCD" },
             { num: "10.8%", label: "prevalence among kids aged 3–6, the highest of any age band — many outgrow it with support", src: "NIDCD" },
           ]}
+          factsIN={[
+            { num: "~1 in 11", label: "at-risk children were confirmed to have a speech or language disorder on full evaluation", src: "Indian rural communication-disorder screening study" },
+            { num: "1.5%", label: "of children aged 4–16 showed stuttering in a Bangalore-area epidemiological study", src: "Srinath et al., Bangalore child & adolescent psychiatric disorder study" },
+            { num: "10%", label: "of people with a communication disorder in India stutter, per a leading speech & hearing institute", src: "All India Institute of Speech and Hearing (AIISH)" },
+          ]}
           note="A blocked word or a mispronounced sound is not a sign of not knowing the answer. Rushing a child to “just spit it out” almost always makes the block worse, not better."
+          noteIN="India is linguistically dense — many children grow up multilingual, which researchers note can complicate early screening for a genuine speech or language disorder versus normal multilingual development."
         />
       </section>
       <section className="itw-block">
@@ -839,23 +1239,34 @@ function SpeechModule({ onBack, onNavigate }) {
 
 export default function InTheirWorld() {
   const [view, setView] = useState("landing");
+  const [soundOn, setSoundOn] = useState(true);
+  const [country, setCountry] = useState("us");
 
   const goBack = () => setView("landing");
   const navigate = (key) => setView(key);
 
   const glow = `rgba(${ACCENT_HEX[view] || ACCENT_HEX.landing}, .16)`;
+  const settings = useMemo(() => ({ soundOn, country }), [soundOn, country]);
 
   return (
-    <div className="itw-root">
-      <div className="itw-grain" aria-hidden="true" />
-      <div className="itw-ambient" style={{ "--itw-glow": glow }} aria-hidden="true" />
-      <div className="itw-app">
-        {view === "landing" && <Landing onSelect={setView} />}
-        {view === "autism" && <AutismModule key="autism" onBack={goBack} onNavigate={navigate} />}
-        {view === "adhd" && <AdhdModule key="adhd" onBack={goBack} onNavigate={navigate} />}
-        {view === "dyslexia" && <DyslexiaModule key="dyslexia" onBack={goBack} onNavigate={navigate} />}
-        {view === "speech" && <SpeechModule key="speech" onBack={goBack} onNavigate={navigate} />}
+    <SettingsContext.Provider value={settings}>
+      <div className="itw-root">
+        <div className="itw-grain" aria-hidden="true" />
+        <div className="itw-ambient" style={{ "--itw-glow": glow }} aria-hidden="true" />
+        <div className="itw-app">
+          <SettingsBar
+            soundOn={soundOn}
+            setSoundOn={setSoundOn}
+            country={country}
+            setCountry={setCountry}
+          />
+          {view === "landing" && <Landing onSelect={setView} />}
+          {view === "autism" && <AutismModule key="autism" onBack={goBack} onNavigate={navigate} />}
+          {view === "adhd" && <AdhdModule key="adhd" onBack={goBack} onNavigate={navigate} />}
+          {view === "dyslexia" && <DyslexiaModule key="dyslexia" onBack={goBack} onNavigate={navigate} />}
+          {view === "speech" && <SpeechModule key="speech" onBack={goBack} onNavigate={navigate} />}
+        </div>
       </div>
-    </div>
+    </SettingsContext.Provider>
   );
 }
