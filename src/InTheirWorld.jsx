@@ -400,7 +400,7 @@ function Viewfinder({ hud, stageStyle, children }) {
         <div className="itw-viewfinder-hud">
           <span className="itw-hud-rec">
             <span className="itw-hud-dot" />
-            {(hud && hud.left) || "OBSERVING"}
+            {(hud && hud.left) || "Take your time"}
           </span>
           <span>{(hud && hud.right) || ""}</span>
         </div>
@@ -1081,21 +1081,89 @@ function AdhdModule({ onBack, onNavigate }) {
 const READING_TEXT =
   "Maya packed her backpack the night before the field trip. She checked twice for her water bottle, her permission slip, and the drawing she made for her grandmother. The bus was loud and smelled like rubber, but she found a window seat and watched the fields turn from green to gold as the wind picked up outside.";
 
+const COMPREHENSION_QUESTIONS = [
+  {
+    q: "What did Maya pack the night before, besides her water bottle?",
+    options: ["Her permission slip and a drawing for her grandmother", "A book and headphones", "Her homework and a snack"],
+    correct: 0,
+  },
+  {
+    q: "Where did Maya sit on the bus?",
+    options: ["Near the driver", "In a window seat", "At the very back"],
+    correct: 1,
+  },
+  {
+    q: "What did Maya notice happening outside as the bus rode along?",
+    options: ["The fields turned from green to gold", "It started to rain", "The bus stopped at a farm"],
+    correct: 0,
+  },
+];
+
 const SWAP_PAIRS = { b: "d", d: "b", p: "q", q: "p" };
+
+function ComprehensionQuiz({ onSubmit }) {
+  const [answers, setAnswers] = useState(Array(COMPREHENSION_QUESTIONS.length).fill(null));
+
+  const pick = (qi, oi) => {
+    setAnswers((prev) => {
+      const copy = [...prev];
+      copy[qi] = oi;
+      return copy;
+    });
+  };
+
+  const allAnswered = answers.every((a) => a !== null);
+
+  return (
+    <div className="itw-quiz">
+      <div className="itw-quiz-label">Quick check — what did you actually take in?</div>
+      {COMPREHENSION_QUESTIONS.map((item, qi) => (
+        <div className="itw-quiz-q" key={qi}>
+          <p>{item.q}</p>
+          <div className="itw-quiz-opts">
+            {item.options.map((opt, oi) => (
+              <button
+                key={oi}
+                type="button"
+                className={`itw-quiz-opt${answers[qi] === oi ? " itw-active" : ""}`}
+                onClick={() => pick(qi, oi)}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button
+        className="itw-btn-primary"
+        disabled={!allAnswered}
+        onClick={() => {
+          const correct = answers.filter((a, i) => a === COMPREHENSION_QUESTIONS[i].correct).length;
+          onSubmit(correct);
+        }}
+      >
+        Check my answers
+      </button>
+    </div>
+  );
+}
 
 function DyslexiaSim() {
   const { soundOn } = useContext(SettingsContext);
   const [mode, setMode] = useState("typical");
   const [chars, setChars] = useState(() => READING_TEXT.split(""));
   const [readout, setReadout] = useState("Timer will start once you pick a view.");
+  const [awaitingQuiz, setAwaitingQuiz] = useState(false);
   const [rating, setRating] = useState(null);
   const timesRef = useRef({ typical: null, simulated: null });
   const readStartRef = useRef(performance.now());
   const intervalRef = useRef(null);
+  const finishedModeRef = useRef(null);
 
   useEffect(() => {
     clearInterval(intervalRef.current);
     setRating(null);
+    setAwaitingQuiz(false);
     if (mode === "simulated") {
       intervalRef.current = setInterval(() => {
         let swapped = false;
@@ -1125,25 +1193,38 @@ function DyslexiaSim() {
     const t = (performance.now() - readStartRef.current) / 1000;
     clearInterval(intervalRef.current);
     timesRef.current[mode] = t;
+    finishedModeRef.current = { mode, t };
     if (soundOn) audio.tone({ freq: 480, type: "sine", duration: 0.2, gain: 0.1 });
     setReadout(
-      `${t.toFixed(1)}s in ${mode} view. Many dyslexic readers take noticeably longer in real reading, every single time, on every page — not because they didn't understand, but because decoding takes real, repeated effort.`
+      `${t.toFixed(1)}s in ${mode} view. Now answer a few quick questions on what you just read.`
     );
+    setAwaitingQuiz(true);
+  };
+
+  const submitQuiz = (correctCount) => {
+    setAwaitingQuiz(false);
+    const { mode, t } = finishedModeRef.current;
     const { typical, simulated } = timesRef.current;
-    const lines = [`Finished the passage in ${t.toFixed(1)}s in ${mode} view.`];
+    const comprehensionPct = Math.round((correctCount / COMPREHENSION_QUESTIONS.length) * 100);
+    const lines = [
+      `Finished the passage in ${t.toFixed(1)}s in ${mode} view, with ${correctCount} of ${COMPREHENSION_QUESTIONS.length} comprehension questions right.`,
+    ];
     let score;
     if (typical != null && simulated != null) {
       const ratio = simulated / typical;
-      score = Math.round(Math.max(30, Math.min(100, 100 - (ratio - 1) * 25)));
+      const speedScore = Math.max(30, Math.min(100, 100 - (ratio - 1) * 25));
+      score = Math.round(speedScore * 0.5 + comprehensionPct * 0.5);
       lines.push(
         `The simulated view took ${ratio.toFixed(1)}× as long as the typical one for you — a gap dyslexic readers live with on every page, not just this one passage.`
       );
       lines.push(
-        "This isn't a comprehension score — reading speed and understanding are different skills, and a slow, careful reader can understand everything just as well."
+        comprehensionPct === 100
+          ? "Full marks on comprehension, though — which is the real point: understanding was never the hard part, decoding speed was."
+          : "Reading speed and understanding are different skills — a slow, careful reader can still land every question."
       );
     } else {
-      score = Math.round(Math.max(40, Math.min(100, 100 - t * 2)));
-      lines.push(`Try the other view now, so the comparison actually means something.`);
+      score = Math.round(Math.max(40, Math.min(100, 100 - t * 2)) * 0.5 + comprehensionPct * 0.5);
+      lines.push(`Try the other view now, so the speed comparison actually means something.`);
     }
     setRating({ score, lines });
   };
@@ -1181,14 +1262,15 @@ function DyslexiaSim() {
         </div>
       </Viewfinder>
       <div className="itw-sim-controls">
-        <button className="itw-btn-primary" onClick={finishReading}>
+        <button className="itw-btn-primary" onClick={finishReading} disabled={awaitingQuiz}>
           I've finished reading
         </button>
         <div className="itw-readout">{readout}</div>
       </div>
+      {awaitingQuiz && <ComprehensionQuiz onSubmit={submitQuiz} />}
       {rating && (
         <RatingCard
-          title="Your reading-pace score"
+          title="Your reading score"
           score={rating.score}
           lines={rating.lines}
           onRetry={() => setRating(null)}
@@ -1253,114 +1335,163 @@ function DyslexiaModule({ onBack, onNavigate }) {
 
 /* ================= SPEECH: word-finding simulator ================= */
 
+const PUSH_DECAY_PER_TICK = 3;
+const PUSH_GAIN_PER_TAP = 13;
+const PUSH_BASE = 40;
+
 function SpeechSim() {
   const { soundOn } = useContext(SettingsContext);
   const [inputVal, setInputVal] = useState("");
+  const [phase, setPhase] = useState("idle"); // idle | running | done
   const [outputWords, setOutputWords] = useState([]); // {text, blocked}
-  const [running, setRunning] = useState(false);
+  const [face, setFace] = useState("idle"); // idle | talking | blocked | done
+  const [pushWord, setPushWord] = useState(null); // current word being pushed through
+  const [pushProgress, setPushProgress] = useState(0);
+  const [pushRequired, setPushRequired] = useState(0);
   const [readout, setReadout] = useState("");
   const [rating, setRating] = useState(null);
-  const [face, setFace] = useState("idle"); // idle | talking | blocked | done
+  const [tapBurst, setTapBurst] = useState(0);
+
+  const queueRef = useRef([]);
+  const idxRef = useRef(0);
+  const startRef = useRef(0);
+  const tapsRef = useRef(0);
+  const blockedCountRef = useRef(0);
+  const progressRef = useRef(0);
+  const decayRef = useRef(null);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
     return () => {
       cancelledRef.current = true;
+      clearInterval(decayRef.current);
       if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
     };
   }, []);
 
-  const speakIt = async () => {
+  const finish = () => {
+    clearInterval(decayRef.current);
+    const total = (performance.now() - startRef.current) / 1000;
+    const words = queueRef.current;
+    setFace("done");
+    setPushWord(null);
+    setPhase("done");
+    setReadout(
+      `That took ${total.toFixed(1)}s and ${tapsRef.current} pushes to get the whole sentence out. You knew every word instantly — the effort was entirely in forcing it past the block, over and over.`
+    );
+    const idealTaps = words.length;
+    const extraTaps = Math.max(0, tapsRef.current - idealTaps);
+    const idealTime = words.length * 0.4;
+    const score = Math.round(
+      Math.max(15, Math.min(100, 100 - (total - idealTime) * 4 - extraTaps * 1.4))
+    );
+    setRating({
+      score,
+      lines: [
+        `${blockedCountRef.current} of ${words.length} word(s) needed to be pushed through, ${tapsRef.current} taps total, ${total.toFixed(1)}s all-in.`,
+        blockedCountRef.current > 0
+          ? "Every one of those pushes was for a word you already had ready — the block lived only in getting it out, not in thinking of it."
+          : "No blocks this run — try a longer or wordier sentence and see how the odds shift.",
+      ],
+    });
+  };
+
+  const beginWord = () => {
+    if (cancelledRef.current) return;
+    if (idxRef.current >= queueRef.current.length) {
+      finish();
+      return;
+    }
+    const w = queueRef.current[idxRef.current];
+    if (w.blocked) {
+      progressRef.current = 0;
+      setPushProgress(0);
+      setPushRequired(w.required);
+      setPushWord(w.text);
+      setFace("blocked");
+      if (soundOn) audio.sweep({ from: 220, to: 260, duration: 0.25, type: "square", gain: 0.06 });
+      clearInterval(decayRef.current);
+      decayRef.current = setInterval(() => {
+        progressRef.current = Math.max(0, progressRef.current - PUSH_DECAY_PER_TICK);
+        setPushProgress(progressRef.current);
+      }, 180);
+    } else {
+      setFace("talking");
+      if (soundOn) {
+        audio.tone({ freq: 340, type: "sine", duration: 0.08, gain: 0.06 });
+        speakText(w.text, { rate: 1.05, volume: 0.85 });
+      }
+      setOutputWords((prev) => [...prev, { text: w.text, blocked: false }]);
+      idxRef.current++;
+      setTimeout(() => {
+        if (!cancelledRef.current) beginWord();
+      }, 200);
+    }
+  };
+
+  const pushTap = () => {
+    if (phase !== "running" || pushWord == null) return;
+    tapsRef.current++;
+    setTapBurst((n) => n + 1);
+    progressRef.current = Math.min(pushRequired, progressRef.current + PUSH_GAIN_PER_TAP);
+    setPushProgress(progressRef.current);
+    if (soundOn) audio.tone({ freq: 260 + Math.random() * 90, type: "square", duration: 0.04, gain: 0.05 });
+    if (progressRef.current >= pushRequired) {
+      clearInterval(decayRef.current);
+      const w = queueRef.current[idxRef.current];
+      blockedCountRef.current++;
+      if (soundOn) {
+        audio.tone({ freq: 540, type: "sine", duration: 0.14, gain: 0.1 });
+        speakText(w.text, { rate: 0.9, volume: 0.85 });
+      }
+      setFace("talking");
+      setOutputWords((prev) => [...prev, { text: w.text, blocked: true }]);
+      setPushWord(null);
+      idxRef.current++;
+      setTimeout(() => {
+        if (!cancelledRef.current) beginWord();
+      }, 260);
+    }
+  };
+
+  const speakIt = () => {
     const value = inputVal.trim();
     if (!value) {
       setReadout("Type something first — what do you want to say?");
       return;
     }
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
-    setRunning(true);
-    setRating(null);
-    setOutputWords([]);
-    setFace("idle");
     cancelledRef.current = false;
-
     const words = value.split(/\s+/);
-    const start = performance.now();
-    let blockedCount = 0;
-
-    for (const w of words) {
-      if (cancelledRef.current) return;
-      const blockChance = w.length > 4 ? 0.45 : 0.2;
-      if (Math.random() < blockChance) {
-        blockedCount++;
-        setFace("blocked");
-        const syll = w.slice(0, Math.min(2, w.length));
-        const reps = 2 + Math.floor(Math.random() * 3);
-        setOutputWords((prev) => [...prev, { text: syll + "-", blocked: true }]);
-        for (let i = 0; i < reps; i++) {
-          if (cancelledRef.current) return;
-          const stutter = syll + "-".repeat((i % 2) + 1);
-          if (soundOn) {
-            audio.sweep({ from: 220, to: 260, duration: 0.12, type: "square", gain: 0.07 });
-            speakText(syll, { rate: 1.5, pitch: 1.15, volume: 0.55 });
-          }
-          setOutputWords((prev) => {
-            const copy = [...prev];
-            copy[copy.length - 1] = { text: stutter, blocked: true };
-            return copy;
-          });
-          await sleep(220);
-        }
-        await sleep(300);
-        if (cancelledRef.current) return;
-        setFace("talking");
-        if (soundOn) {
-          audio.tone({ freq: 540, type: "sine", duration: 0.14, gain: 0.1 });
-          speakText(w, { rate: 0.9, volume: 0.85 });
-        }
-        setOutputWords((prev) => {
-          const copy = [...prev];
-          copy[copy.length - 1] = { text: w, blocked: false };
-          return copy;
-        });
-      } else {
-        setFace("talking");
-        if (soundOn) {
-          audio.tone({ freq: 340, type: "sine", duration: 0.08, gain: 0.06 });
-          speakText(w, { rate: 1.05, volume: 0.85 });
-        }
-        setOutputWords((prev) => [...prev, { text: w, blocked: false }]);
-        await sleep(120);
-      }
-    }
-
-    const total = (performance.now() - start) / 1000;
-    setFace("done");
-    setReadout(
-      `That took ${total.toFixed(1)}s to say out loud. You knew the whole sentence the second you typed it — that gap between knowing and saying is what a speech or word-finding difference can feel like, every single sentence, all day.`
-    );
-    const idealTime = words.length * 0.35;
-    const score = Math.round(Math.max(20, Math.min(100, 100 - (total - idealTime) * 6)));
-    setRating({
-      score,
-      lines: [
-        `${blockedCount} of ${words.length} word(s) blocked before coming out, taking ${total.toFixed(1)}s total.`,
-        blockedCount > 0
-          ? "Every block above was a word you already knew — the delay was entirely in getting it out, not in thinking of it."
-          : "This run had no blocks — try a longer or wordier sentence and see how the odds change.",
-      ],
+    queueRef.current = words.map((w) => {
+      const blockChance = w.length > 4 ? 0.5 : 0.25;
+      const isBlocked = Math.random() < blockChance;
+      return { text: w, blocked: isBlocked, required: isBlocked ? PUSH_BASE + w.length * 5 : 0 };
     });
-    setRunning(false);
+    idxRef.current = 0;
+    tapsRef.current = 0;
+    blockedCountRef.current = 0;
+    setOutputWords([]);
+    setRating(null);
+    setReadout("");
+    setFace("idle");
+    setPushWord(null);
+    setPhase("running");
+    startRef.current = performance.now();
+    beginWord();
   };
+
+  const pushPct = pushRequired ? Math.round((pushProgress / pushRequired) * 100) : 0;
 
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> type a short sentence describing the scene below, then click
-        “Say it.” It'll actually be spoken aloud (turn sound on) — watch, and listen to, what
-        happens on the way out.
+        <strong>Task:</strong> type a short sentence describing the scene below, then click “Say
+        it.” When a word blocks, it won't come out on its own — you have to tap{" "}
+        <strong>Push</strong> rapidly to force it past the block before the bar drains back down.
       </div>
       <Viewfinder
-        hud={{ left: running ? "SPEAKING…" : "READY", right: "" }}
+        hud={{ left: phase === "running" ? (pushWord ? "STUCK" : "SPEAKING…") : "READY", right: "" }}
         stageStyle={{ minHeight: "auto" }}
       >
         <div className="itw-speech-scene">
@@ -1368,6 +1499,31 @@ function SpeechSim() {
           <div className={`itw-speech-face${face === "blocked" ? " itw-straining" : ""}`}>
             {face === "blocked" ? "😣" : face === "talking" ? "🗣️" : face === "done" ? "🙂" : "😐"}
           </div>
+          {pushWord != null && (
+            <div className="itw-push-zone">
+              <div className="itw-push-word">
+                {pushWord.slice(0, Math.max(1, Math.round((pushPct / 100) * pushWord.length)))}
+                <span className="itw-push-word-rest">
+                  {pushWord.slice(Math.max(1, Math.round((pushPct / 100) * pushWord.length)))}
+                </span>
+              </div>
+              <div className="itw-push-bar">
+                <div className="itw-push-bar-fill" style={{ width: `${pushPct}%` }} />
+              </div>
+              <button
+                key={tapBurst}
+                type="button"
+                className="itw-push-btn"
+                onClick={pushTap}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  pushTap();
+                }}
+              >
+                Push
+              </button>
+            </div>
+          )}
         </div>
       </Viewfinder>
       <div className="itw-sim-controls" style={{ borderTop: "1px solid var(--itw-border)" }}>
@@ -1378,8 +1534,9 @@ function SpeechSim() {
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && speakIt()}
+          disabled={phase === "running"}
         />
-        <button className="itw-btn-primary" onClick={speakIt} disabled={running}>
+        <button className="itw-btn-primary" onClick={speakIt} disabled={phase === "running"}>
           Say it
         </button>
       </div>
