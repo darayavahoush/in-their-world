@@ -257,11 +257,7 @@ function Landing({ onSelect }) {
           real data and practical steps you can use right away.
         </p>
         <div className="itw-disclaimer itw-rise itw-rise-4">
-          <strong>A quick note before you start:</strong> these simulations are
-          approximations, built to build empathy — not diagnoses, and not any one child's
-          exact experience. No two autistic, ADHD, dyslexic, or speech-affected kids
-          experience the world identically. Use this as a starting point for curiosity,
-          not a stereotype.
+          <strong>Before you start:</strong> these are approximations for empathy, not diagnoses — every child's experience is their own.
         </div>
       </div>
 
@@ -290,14 +286,35 @@ function Landing({ onSelect }) {
         ))}
       </div>
 
+      <AboutBlock />
+
       <div className="itw-foot-note">
-        Built to build empathy, not to diagnose. Global/US statistics are drawn from CDC,
-        NIDCD, ASHA, and the International Dyslexia Association; India statistics are drawn
-        from peer-reviewed Indian epidemiological studies and meta-analyses. All figures are
-        approximate — prevalence estimates shift as diagnostic criteria, screening access,
-        and study methodology change, and vary further by region within each country.
+        Built to build empathy, not to diagnose. Figures are approximate and drawn from CDC, NIDCD,
+        ASHA, the International Dyslexia Association, and peer-reviewed Indian epidemiological studies.
       </div>
     </section>
+  );
+}
+
+function AboutBlock() {
+  return (
+    <div className="itw-about itw-rise itw-rise-5">
+      <div className="itw-about-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4a5 5 0 0 1 6.4 2 5 5 0 0 1 6.4-2C22 4.5 23.6 8 22 11.7 19.5 16.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
+      </div>
+      <div>
+        <h3>Why this exists</h3>
+        <p>
+          Most parents don't get much time before they need to understand what their child is
+          going through. This is a five-minute way in — try the task, feel the friction, then
+          walk away with a couple of things you can actually do differently at home or school.
+        </p>
+        <p>
+          Made by <a href="https://www.manaslearning.com" target="_blank" rel="noreferrer">Manas Learning</a>,
+          for the parents and teachers who want a starting point, not a stereotype.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -448,9 +465,7 @@ function Viewfinder({ hud, stageStyle, children }) {
 
 /* ---------------- Rating card (shared by every task) ---------------- */
 
-function RatingCard({ title, score, maxScore = 100, lines, retryLabel = "Try again", onRetry }) {
-  const pct = Math.max(0, Math.min(100, Math.round((score / maxScore) * 100)));
-  const stars = Math.max(1, Math.min(5, Math.round(pct / 20)));
+function RatingCard({ title, lines, retryLabel = "Try again", onRetry }) {
   useEffect(() => {
     audio.tone({ freq: 523, type: "sine", duration: 0.16, gain: 0.1 });
     audio.tone({ freq: 659, type: "sine", duration: 0.2, gain: 0.09, delay: 0.09 });
@@ -458,17 +473,10 @@ function RatingCard({ title, score, maxScore = 100, lines, retryLabel = "Try aga
   return (
     <div className="itw-rating-card" role="status">
       <div className="itw-rating-top">
-        <div>
-          <div className="itw-rating-title">{title}</div>
-          <div className="itw-rating-stars" aria-hidden="true">
-            {"★".repeat(stars)}
-            {"☆".repeat(5 - stars)}
-          </div>
+        <div className="itw-rating-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4a5 5 0 0 1 6.4 2 5 5 0 0 1 6.4-2C22 4.5 23.6 8 22 11.7 19.5 16.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
         </div>
-        <div className="itw-rating-score">
-          {Math.round(score)}
-          <span>/{maxScore}</span>
-        </div>
+        <div className="itw-rating-title">{title}</div>
       </div>
       <ul className="itw-rating-lines">
         {lines.map((l, i) => (
@@ -478,6 +486,21 @@ function RatingCard({ title, score, maxScore = 100, lines, retryLabel = "Try aga
       <button className="itw-btn-ghost itw-rating-retry" onClick={onRetry}>
         {retryLabel}
       </button>
+    </div>
+  );
+}
+
+/* ---------------- How-to strip (3 short steps, shown before every task) ---------------- */
+
+function HowTo({ steps }) {
+  return (
+    <div className="itw-howto">
+      {steps.map((s, i) => (
+        <div className="itw-howto-step" key={i}>
+          <span className="itw-howto-num">{i + 1}</span>
+          <span>{s}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -690,10 +713,15 @@ function AutismSim() {
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> {TOTAL_ROUNDS} rounds. One dot is the real target — the rest are
-        identical-looking decoys. Find and click the right one before the timer runs out. Noise
-        climbs, decoys multiply, and the clock shrinks — all on their own, whether you're ready or not.
+        Find the one real dot among the decoys, {TOTAL_ROUNDS} rounds — it only gets louder from here.
       </div>
+      <HowTo
+        steps={[
+          "Spot the one real dot",
+          "Click it before time runs out",
+          "Noise & decoys ramp up each round",
+        ]}
+      />
       <Viewfinder
         hud={{
           left: phase === "task" ? `ROUND ${round}/${TOTAL_ROUNDS}` : "STANDBY",
@@ -804,8 +832,7 @@ function AutismSim() {
       </div>
       {rating && (
         <RatingCard
-          title="Your focus score"
-          score={rating.score}
+          title="What that round was like"
           lines={[
             `Cleared ${TOTAL_ROUNDS} rounds in ${rating.time}s, with ${rating.misses} decoy click(s) and ${rating.timeouts} round(s) where time ran out before you found it.`,
             rating.misses > 0 || rating.timeouts > 0
@@ -824,7 +851,7 @@ function AutismModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="autism"
-      eyebrow="Case File 01 — Autism"
+      eyebrow="Autism"
       title="The room doesn't turn down."
       dek="For many autistic kids, sensory input doesn't fade into the background automatically — the hum of lights, a chair scraping, three conversations at once can all arrive at full volume, all at the same time."
       onBack={onBack}
@@ -1095,11 +1122,15 @@ function AdhdSim() {
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> click the numbers 1 through 10, in order, as fast as you can.
-        Dawdle on one and it'll wander off. Interruptions will talk at you and demand a
-        response — tap the <strong>×</strong> to dismiss one before it wins; ignore it and it
-        freezes your focus for a moment. They come faster the longer you've been going.
+        Click 1 through 10 in order, fast — the numbers won't wait, and neither will the interruptions.
       </div>
+      <HowTo
+        steps={[
+          "Click 1 → 10 in order",
+          "Dismiss pop-ups with ×",
+          "Interruptions speed up over time",
+        ]}
+      />
       <Viewfinder hud={{ left: running ? `TARGET ${nextNum}/10` : "READY", right: `MISS ${misses}` }}>
         <div className={`itw-focus-field${frozen ? " itw-frozen" : ""}`}>
           {numbers.map((n) => (
@@ -1152,8 +1183,7 @@ function AdhdSim() {
       </div>
       {rating && (
         <RatingCard
-          title="Your task-completion score"
-          score={rating.score}
+          title="What just happened to your focus"
           lines={[
             `Finished in ${rating.time}s with ${rating.misses} misclick(s)/unhandled interruption(s), interruptions ${
               rating.distractOn ? "on" : "off"
@@ -1174,7 +1204,7 @@ function AdhdModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="adhd"
-      eyebrow="Case File 02 — ADHD"
+      eyebrow="ADHD"
       title="Attention isn't a switch."
       dek="It's not that kids with ADHD can't focus — it's that their attention responds to whatever is most stimulating in the moment, and staying locked onto one quiet task takes active, exhausting effort."
       onBack={onBack}
@@ -1378,9 +1408,15 @@ function DyslexiaSim() {
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> read the passage below, then click “I've finished reading.” Try
-        the typical view first, then switch to simulated and compare.
+        Read the passage, then compare how it feels in typical view versus simulated view.
       </div>
+      <HowTo
+        steps={[
+          "Read the passage below",
+          "Click “I've finished reading”",
+          "Switch views and compare",
+        ]}
+      />
       <div className="itw-strat-tabs" style={{ padding: "16px 18px 0" }}>
         <button
           className={`itw-btn-ghost${mode === "typical" ? " itw-active" : ""}`}
@@ -1424,8 +1460,7 @@ function DyslexiaSim() {
       {awaitingQuiz && <ComprehensionQuiz onSubmit={submitQuiz} />}
       {rating && (
         <RatingCard
-          title="Your reading score"
-          score={rating.score}
+          title="What decoding that text was like"
           lines={rating.lines}
           onRetry={() => setRating(null)}
           retryLabel="Keep comparing"
@@ -1439,7 +1474,7 @@ function DyslexiaModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="dyslexia"
-      eyebrow="Case File 03 — Dyslexia"
+      eyebrow="Dyslexia"
       title="Smart, and still stuck on the sentence."
       dek="Dyslexia isn't about seeing letters backwards — it's a difference in how the brain connects written symbols to sounds. Comprehension is usually fine. Decoding the words to get there is the hard part."
       onBack={onBack}
@@ -1725,11 +1760,15 @@ function SpeechSim() {
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> someone asks you {CONVO_PROMPTS.length} quick questions out loud,
-        one at a time, each with a shrinking window to answer. Type your reply and hit{" "}
-        <strong>Say it</strong> — if a word blocks, tap <strong>Push</strong> to force it out. If
-        the timer runs out first, the conversation moves on without you, mid-word if it has to.
+        Answer {CONVO_PROMPTS.length} quick questions before your window to reply closes.
       </div>
+      <HowTo
+        steps={[
+          "Type your answer",
+          "Hit “Say it” to respond",
+          "Tap “Push” if a word gets stuck",
+        ]}
+      />
       <Viewfinder
         hud={{ left: active ? `QUESTION ${roundIdx + 1}/${CONVO_PROMPTS.length}` : "READY", right: "" }}
         stageStyle={{ minHeight: "auto" }}
@@ -1832,8 +1871,7 @@ function SpeechSim() {
         </div>
         {rating && (
           <RatingCard
-            title="Your conversation score"
-            score={rating.score}
+            title="What finding those words was like"
             lines={rating.lines}
             onRetry={start}
             retryLabel="Try the conversation again"
@@ -1848,7 +1886,7 @@ function SpeechModule({ onBack, onNavigate }) {
   return (
     <ModuleShell
       accent="speech"
-      eyebrow="Case File 04 — Speech & Language"
+      eyebrow="Speech & Language"
       title="The word is there. It's just not arriving yet."
       dek="For kids with speech sound disorders, stuttering, or word-finding difficulties, the thought is usually fully formed — the gap is between knowing what to say and getting it out cleanly."
       onBack={onBack}
