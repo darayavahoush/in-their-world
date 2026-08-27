@@ -173,7 +173,7 @@ function speakText(text, { rate = 1, pitch = 1, volume = 0.85 } = {}) {
 const MODULES = [
   {
     key: "autism",
-    tag: "Case File 01",
+    tag: "Sensory input",
     name: "Autism",
     blurb: "Sensory processing, filtering, and why a “normal” room can feel like too much.",
     statBig: "1 in 31",
@@ -183,7 +183,7 @@ const MODULES = [
   },
   {
     key: "adhd",
-    tag: "Case File 02",
+    tag: "Sustained focus",
     name: "ADHD",
     blurb: "What it takes to hold attention on one task while everything else pulls at you.",
     statBig: "11.4%",
@@ -193,7 +193,7 @@ const MODULES = [
   },
   {
     key: "dyslexia",
-    tag: "Case File 03",
+    tag: "Reading & decoding",
     name: "Dyslexia",
     blurb: "Decoding text when letters won't sit still and reading takes real effort, every line.",
     statBig: "15–20%",
@@ -203,7 +203,7 @@ const MODULES = [
   },
   {
     key: "speech",
-    tag: "Case File 04",
+    tag: "Finding the words",
     name: "Speech & Language",
     blurb: "Knowing exactly what you want to say — and having the words arrive late, or not at all.",
     statBig: "1 in 12",
@@ -213,49 +213,85 @@ const MODULES = [
   },
 ];
 
+const MODULE_ICONS = {
+  autism: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 20c3-7 7-7 8 0s5 7 8 0 5-7 8 0 3 7 4 7" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  adhd: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="4.5" fill="currentColor" />
+      <path d="M20 4v7M20 29v7M4 20h7M29 20h7M9 9l5 5M26 26l5 5M31 9l-5 5M14 26l-5 5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  ),
+  dyslexia: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="7" y="27" fontFamily="Nunito, sans-serif" fontWeight="800" fontSize="22" fill="currentColor">b</text>
+      <text x="20" y="27" fontFamily="Nunito, sans-serif" fontWeight="800" fontSize="22" fill="currentColor" transform="scale(-1,1) translate(-40,0)">b</text>
+    </svg>
+  ),
+  speech: (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 12a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H16l-6 6v-6a4 4 0 0 1-2-3.4V12Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M14 17h12M14 21h7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  ),
+};
+
 function Landing({ onSelect }) {
   const { country } = useContext(SettingsContext);
   return (
     <section className="itw-view">
+      <div className="itw-blob itw-blob-1" />
+      <div className="itw-blob itw-blob-2" />
       <div className="itw-masthead">
-        <div className="itw-eyebrow itw-rise itw-rise-1">Field observation log — for parents &amp; teachers</div>
+        <div className="itw-eyebrow itw-rise itw-rise-1">Experience What They Feel</div>
         <h1 className="itw-title itw-rise itw-rise-2">
-          In their <em>world</em>,<br />for a few minutes.
+          Step into their <span className="itw-accent-word">world<svg className="itw-squiggle" viewBox="0 0 160 14" preserveAspectRatio="none"><path d="M2 9c14-10 26-10 40 0s26 10 40 0 26-10 40 0 26 10 36 2" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"/></svg></span>,<br />just for a few minutes.
         </h1>
         <p className="itw-lede itw-rise itw-rise-3">
-          Four short, interactive experiences that simulate what focus, reading, sensory
+          Four short, hands-on experiences that simulate what focus, reading, sensory
           input, and speaking out loud can feel like for kids with autism, ADHD, dyslexia,
-          or a speech difference — each one a small task you attempt and get rated on,
-          paired with real data and practical steps that follow.
+          or a speech difference — each one a small task you try yourself, paired with
+          real data and practical steps you can use right away.
         </p>
         <div className="itw-disclaimer itw-rise itw-rise-4">
-          <strong>Before you start:</strong> these simulations are approximations, built to
-          build empathy — not diagnoses, and not any one child's exact experience. No two
-          autistic, ADHD, dyslexic, or speech-affected kids experience the world identically.
-          Use this as a starting point for curiosity, not a stereotype.
+          <strong>A quick note before you start:</strong> these simulations are
+          approximations, built to build empathy — not diagnoses, and not any one child's
+          exact experience. No two autistic, ADHD, dyslexic, or speech-affected kids
+          experience the world identically. Use this as a starting point for curiosity,
+          not a stereotype.
         </div>
       </div>
 
       <div className="itw-grid-eyebrow itw-rise itw-rise-5">Four experiences</div>
-      <div className="itw-module-grid itw-rise itw-rise-5">
-        {MODULES.map((m) => (
-          <button key={m.key} className="itw-mcard" data-m={m.key} onClick={() => onSelect(m.key)}>
-            <div className="itw-tag">{m.tag}</div>
+      <div className="itw-bento itw-rise itw-rise-5">
+        {MODULES.map((m, i) => (
+          <button key={m.key} className={`itw-mcard itw-bento-${i}`} data-m={m.key} onClick={() => onSelect(m.key)}>
+            <div className="itw-mcard-blob" />
+            <div className="itw-mcard-top">
+              <div className="itw-mcard-icon">{MODULE_ICONS[m.key]}</div>
+              <div className="itw-tag">{m.tag}</div>
+            </div>
             <h3>{m.name}</h3>
             <p>{m.blurb}</p>
-            <div className="itw-stat">
-              <b>{country === "in" ? m.statBigIN : m.statBig}</b>{" "}
-              <span style={{ color: "var(--itw-muted)" }}>
-                {country === "in" ? m.statRestIN : m.statRest}
-              </span>
+            <div className="itw-mcard-bottom">
+              <div className="itw-stat">
+                <b>{country === "in" ? m.statBigIN : m.statBig}</b>
+                <span>{country === "in" ? m.statRestIN : m.statRest}</span>
+              </div>
+              <div className="itw-enter">
+                Try it
+                <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h11M10 5l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
             </div>
-            <div className="itw-enter">Open the file →</div>
           </button>
         ))}
       </div>
 
       <div className="itw-foot-note">
-        Built as an awareness &amp; training tool. Global/US statistics are drawn from CDC,
+        Built to build empathy, not to diagnose. Global/US statistics are drawn from CDC,
         NIDCD, ASHA, and the International Dyslexia Association; India statistics are drawn
         from peer-reviewed Indian epidemiological studies and meta-analyses. All figures are
         approximate — prevalence estimates shift as diagnostic criteria, screening access,
@@ -458,7 +494,8 @@ const NOISE_PHRASES = [
 ];
 const NOISE_COLORS = ["#4fb3a6", "#e8a23d", "#e37b6e", "#a48ce0", "#ffffff"];
 
-const TOTAL_ROUNDS = 5;
+const TOTAL_ROUNDS = 8;
+const ROUND_TIME_LIMIT = (round) => Math.max(1.1, 2.8 - round * 0.22);
 
 function AutismSim() {
   const { soundOn } = useContext(SettingsContext);
@@ -468,16 +505,22 @@ function AutismSim() {
   const [targetPos, setTargetPos] = useState({ top: 50, left: 50 });
   const [decoys, setDecoys] = useState([]);
   const [misses, setMisses] = useState(0);
+  const [timeouts, setTimeouts] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [rating, setRating] = useState(null);
 
   const roundStartRef = useRef(0);
   const timeAccRef = useRef(0);
   const missesRef = useRef(0);
+  const timeoutsRef = useRef(0);
   const decoyIdRef = useRef(0);
+  const timerRafRef = useRef(null);
+  const roundLimitRef = useRef(0);
 
   const practiceIntensity = (100 - filter) / 100;
-  const taskIntensity = Math.min(1, 0.3 + (round - 1) * 0.175);
+  const taskIntensity = Math.min(1.15, 0.35 + (round - 1) * 0.14);
   const intensity = phase === "task" ? taskIntensity : practiceIntensity;
+  const camouflage = phase === "task" ? Math.min(0.85, Math.max(0, (round - 2) * 0.16)) : 0;
 
   const noiseItems = useMemo(
     () =>
@@ -494,14 +537,14 @@ function AutismSim() {
   );
   const buzzShapes = useMemo(
     () =>
-      Array.from({ length: 18 }).map((_, i) => ({
+      Array.from({ length: 30 }).map((_, i) => ({
         id: i,
-        size: 26 + Math.random() * 100,
+        size: 24 + Math.random() * 110,
         top: Math.random() * 92,
         left: Math.random() * 92,
-        color: ["#4fb3a6", "#e8a23d", "#e37b6e", "#a48ce0"][i % 4],
-        baseOpacity: 0.14 + Math.random() * 0.22,
-        duration: 2.5 + Math.random() * 4,
+        color: ["#4b8c74", "#dd9a3b", "#e07a54", "#8c67a8"][i % 4],
+        baseOpacity: 0.16 + Math.random() * 0.26,
+        duration: 2.2 + Math.random() * 3.6,
       })),
     []
   );
@@ -521,9 +564,9 @@ function AutismSim() {
 
   const readout =
     phase === "task"
-      ? round >= 4
-        ? "Full overload — this is what an unfiltered classroom feels like on its worst day. Find the real target anyway."
-        : "Noise climbs every round, on its own. There's no slider now — this is the part that doesn't turn down on demand."
+      ? round >= 5
+        ? "Full overload — this is what an unfiltered classroom feels like on its worst day. Find the real target anyway, before time runs out."
+        : "Noise climbs and time shrinks every round, on its own. There's no slider now — this is the part that doesn't turn down on demand."
       : filter < 25
       ? "This is closer to a packed classroom during free time — bright lights, side conversations, a chair scraping."
       : filter < 55
@@ -539,15 +582,22 @@ function AutismSim() {
       left = 6 + Math.random() * 80;
       ok = true;
       for (const p of avoid) {
-        if (Math.abs(p.top - top) < 17 && Math.abs(p.left - left) < 17) ok = false;
+        if (Math.abs(p.top - top) < 15 && Math.abs(p.left - left) < 15) ok = false;
       }
     } while (!ok);
     return { top, left };
   };
 
+  const clearTimer = () => {
+    if (timerRafRef.current) {
+      clearInterval(timerRafRef.current);
+      timerRafRef.current = null;
+    }
+  };
+
   const setupRound = (roundNum) => {
     const t = randPos([]);
-    const decoyCount = roundNum >= 3 ? 2 : 1;
+    const decoyCount = roundNum >= 6 ? 5 : roundNum >= 4 ? 4 : roundNum >= 2 ? 3 : 2;
     const avoid = [t];
     const nd = [];
     for (let i = 0; i < decoyCount; i++) {
@@ -558,12 +608,51 @@ function AutismSim() {
     setTargetPos(t);
     setDecoys(nd);
     roundStartRef.current = performance.now();
+    const limit = ROUND_TIME_LIMIT(roundNum);
+    roundLimitRef.current = limit;
+    setTimeLeft(limit);
+    clearTimer();
+    timerRafRef.current = setInterval(() => {
+      const elapsed = (performance.now() - roundStartRef.current) / 1000;
+      const remaining = limit - elapsed;
+      if (remaining <= 0) {
+        setTimeLeft(0);
+        clearTimer();
+        timeoutsRef.current += 1;
+        setTimeouts(timeoutsRef.current);
+        missesRef.current += 1;
+        setMisses(missesRef.current);
+        if (soundOn) audio.sweep({ from: 260, to: 90, duration: 0.3, type: "sawtooth", gain: 0.09 });
+        advanceRound(roundNum);
+      } else {
+        setTimeLeft(remaining);
+      }
+    }, 60);
+  };
+
+  const advanceRound = (finishedRound) => {
+    if (finishedRound >= TOTAL_ROUNDS) {
+      clearTimer();
+      const totalTime = timeAccRef.current;
+      const avgTime = totalTime / (TOTAL_ROUNDS - timeoutsRef.current || 1);
+      const speedScore = Math.max(0, 100 - avgTime * 22);
+      const missPenalty = missesRef.current * 11 + timeoutsRef.current * 6;
+      const score = Math.round(Math.max(0, Math.min(100, speedScore - missPenalty + 6)));
+      setPhase("done");
+      setRating({ score, time: totalTime.toFixed(1), misses: missesRef.current, timeouts: timeoutsRef.current });
+    } else {
+      const next = finishedRound + 1;
+      setRound(next);
+      setupRound(next);
+    }
   };
 
   const startTask = () => {
     timeAccRef.current = 0;
     missesRef.current = 0;
+    timeoutsRef.current = 0;
     setMisses(0);
+    setTimeouts(0);
     setRating(null);
     setPhase("task");
     setRound(1);
@@ -574,20 +663,9 @@ function AutismSim() {
     if (phase !== "task") return;
     const elapsed = (performance.now() - roundStartRef.current) / 1000;
     timeAccRef.current += elapsed;
+    clearTimer();
     if (soundOn) audio.tone({ freq: 700, type: "sine", duration: 0.16, gain: 0.13 });
-    if (round >= TOTAL_ROUNDS) {
-      const totalTime = timeAccRef.current;
-      const avgTime = totalTime / TOTAL_ROUNDS;
-      const speedScore = Math.max(0, 100 - avgTime * 20);
-      const missPenalty = missesRef.current * 12;
-      const score = Math.round(Math.max(0, Math.min(100, speedScore - missPenalty + 8)));
-      setPhase("done");
-      setRating({ score, time: totalTime.toFixed(1), misses: missesRef.current });
-    } else {
-      const next = round + 1;
-      setRound(next);
-      setupRound(next);
-    }
+    advanceRound(round);
   };
 
   const clickDecoy = () => {
@@ -598,17 +676,23 @@ function AutismSim() {
   };
 
   const retry = () => {
+    clearTimer();
     setPhase("intro");
     setRound(0);
     setRating(null);
   };
 
+  useEffect(() => clearTimer, []);
+
+  const timerPct = roundLimitRef.current ? Math.max(0, Math.min(100, (timeLeft / roundLimitRef.current) * 100)) : 100;
+  const targetColor = camouflage > 0 ? `rgba(229,72,77,${(1 - camouflage * 0.75).toFixed(2)})` : undefined;
+
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> five rounds. Each round, find and click the <em>real</em> target,
-        not the decoy — fast. Sensory noise gets worse every round, on its own, whether you're
-        ready or not.
+        <strong>Task:</strong> {TOTAL_ROUNDS} rounds. One dot is the real target — the rest are
+        identical-looking decoys. Find and click the right one before the timer runs out. Noise
+        climbs, decoys multiply, and the clock shrinks — all on their own, whether you're ready or not.
       </div>
       <Viewfinder
         hud={{
@@ -616,6 +700,11 @@ function AutismSim() {
           right: `${Math.round(intensity * 100)}% NOISE`,
         }}
       >
+        {phase === "task" && (
+          <div className="itw-round-timer">
+            <div className="itw-round-timer-fill" style={{ width: `${timerPct}%` }} />
+          </div>
+        )}
         {phase !== "task" && (
           <div
             className="itw-sensory-target"
@@ -635,8 +724,7 @@ function AutismSim() {
               onClick={clickTarget}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && clickTarget()}
             >
-              <div className="itw-dot" />
-              <p>find me</p>
+              <div className="itw-dot" style={targetColor ? { background: targetColor, boxShadow: "none" } : undefined} />
             </div>
             {decoys.map((d) => (
               <div
@@ -648,7 +736,7 @@ function AutismSim() {
                 onClick={clickDecoy}
                 onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && clickDecoy()}
               >
-                <div className="itw-dot" />
+                <div className="itw-dot" style={targetColor ? { background: "rgba(229,72,77,.9)", boxShadow: "0 0 0 10px rgba(229,72,77,.15), 0 0 30px rgba(229,72,77,.35)" } : undefined} />
               </div>
             ))}
           </>
@@ -719,10 +807,10 @@ function AutismSim() {
           title="Your focus score"
           score={rating.score}
           lines={[
-            `Cleared all ${TOTAL_ROUNDS} rounds in ${rating.time}s total, with ${rating.misses} decoy click(s).`,
-            rating.misses > 0
-              ? "Every decoy you clicked was a false alarm — that's what a nervous system taking in more than it can filter has to sort through constantly, and still gets wrong sometimes."
-              : "No false alarms, even as the noise climbed toward full overload — run it again and see if that holds.",
+            `Cleared ${TOTAL_ROUNDS} rounds in ${rating.time}s, with ${rating.misses} decoy click(s) and ${rating.timeouts} round(s) where time ran out before you found it.`,
+            rating.misses > 0 || rating.timeouts > 0
+              ? "Every decoy or timeout above is what a nervous system taking in more than it can filter has to sort through constantly — and still gets wrong sometimes, even when trying hard."
+              : "A clean run, even as the noise climbed toward full overload and the clock got tighter — run it again and see if that holds.",
           ]}
           onRetry={retry}
           retryLabel="Run it again"
@@ -787,10 +875,11 @@ function AutismModule({ onBack, onNavigate }) {
 /* ================= ADHD: focus task simulator ================= */
 
 const DISTRACT_MSGS = [
-  "📱 New message!", "🔔 Reminder: due tomorrow", "👀 Someone's watching you",
-  "🎵 Song stuck in your head", "⏰ Only 2 minutes left!", "💬 Did you hear that?",
-  "📌 Don't forget your bag", "✨ Shiny thing over here", "👉 Click me!",
-  "🎮 Just one round...", "🐦 Bird outside the window", "😂 Someone passed a note",
+  "New message!", "Reminder: due tomorrow", "Someone's watching you",
+  "That song is stuck in your head", "Only 2 minutes left!", "Did you hear that?",
+  "Don't forget your bag", "Ooh, shiny thing over here", "Click me!",
+  "Just one more round...", "There's a bird outside the window", "Someone passed you a note",
+  "Wait, what were you doing again?", "Is that your name being called?",
 ];
 
 function AdhdSim() {
@@ -800,17 +889,27 @@ function AdhdSim() {
   const [misses, setMisses] = useState(0);
   const [running, setRunning] = useState(false);
   const [distractOn, setDistractOn] = useState(true);
-  const [distractions, setDistractions] = useState([]); // {id, text, top, left, opacity}
+  const [distractions, setDistractions] = useState([]); // {id, text, top, left, opacity, urgent}
+  const [frozen, setFrozen] = useState(false);
   const [readout, setReadout] = useState("Ready when you are.");
   const [rating, setRating] = useState(null);
 
   const startTimeRef = useRef(0);
-  const distractIntervalRef = useRef(null);
+  const distractTimeoutRef = useRef(null);
   const timeoutsRef = useRef([]);
   const distractIdRef = useRef(0);
+  const numbersRef = useRef([]);
+  const nextNumRef = useRef(1);
+
+  useEffect(() => {
+    numbersRef.current = numbers;
+  }, [numbers]);
+  useEffect(() => {
+    nextNumRef.current = nextNum;
+  }, [nextNum]);
 
   const clearAllTimers = useCallback(() => {
-    if (distractIntervalRef.current) clearInterval(distractIntervalRef.current);
+    if (distractTimeoutRef.current) clearTimeout(distractTimeoutRef.current);
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
   }, []);
@@ -830,37 +929,73 @@ function AdhdSim() {
     return () => audio.stopDrone("adhd");
   }, [soundOn]);
 
+  // Positions distractions well away from every pending/visible number so they
+  // never physically sit on top of a target — they compete for attention, they
+  // don't literally block the click underneath.
+  const findDistractionSpot = () => {
+    const avoid = numbersRef.current.map((n) => ({ top: n.top, left: n.left }));
+    let top, left, ok, tries = 0;
+    do {
+      top = 4 + Math.random() * 84;
+      left = 4 + Math.random() * 66;
+      ok = true;
+      for (const p of avoid) {
+        if (Math.abs(p.top - top) < 12 && Math.abs(p.left - left) < 12) ok = false;
+      }
+      tries++;
+    } while (!ok && tries < 20);
+    return { top, left };
+  };
+
+  const scheduleNextDistraction = useCallback(() => {
+    // Spawns get a little faster as the run progresses, but gently —
+    // this should feel like real pressure, not a punishing gauntlet.
+    const progress = Math.min(1, (nextNumRef.current - 1) / 9);
+    const delay = 1650 - progress * 550 + Math.random() * 400;
+    distractTimeoutRef.current = setTimeout(() => {
+      spawnDistraction();
+      scheduleNextDistraction();
+    }, delay);
+  }, []);
+
   const spawnDistraction = useCallback(() => {
     const id = distractIdRef.current++;
-    const d = {
-      id,
-      text: DISTRACT_MSGS[Math.floor(Math.random() * DISTRACT_MSGS.length)],
-      top: Math.random() * 82,
-      left: Math.random() * 62,
-      opacity: 0,
-    };
+    const pos = findDistractionSpot();
+    const text = DISTRACT_MSGS[Math.floor(Math.random() * DISTRACT_MSGS.length)];
+    const d = { id, text, ...pos, opacity: 0, urgent: false };
     setDistractions((prev) => [...prev, d]);
-    if (soundOn) audio.noiseBurst({ duration: 0.12, gain: 0.05, filterFreq: 2400 });
-    // fade in
+    if (soundOn) {
+      audio.noiseBurst({ duration: 0.12, gain: 0.05, filterFreq: 2400 });
+      speakText(text, { rate: 1.15, pitch: 1.05, volume: 0.5 });
+    }
     const t1 = setTimeout(() => {
       setDistractions((prev) => prev.map((x) => (x.id === id ? { ...x, opacity: 1 } : x)));
     }, 20);
-    // fade out then remove
+    // Plenty of grace before it turns urgent, and more still before it
+    // actually costs you — dismissing should feel doable, not frantic.
     const t2 = setTimeout(() => {
-      setDistractions((prev) => prev.map((x) => (x.id === id ? { ...x, opacity: 0 } : x)));
-      const t3 = setTimeout(() => {
-        setDistractions((prev) => prev.filter((x) => x.id !== id));
-      }, 300);
-      timeoutsRef.current.push(t3);
-    }, 1400);
-    timeoutsRef.current.push(t1, t2);
+      setDistractions((prev) => prev.map((x) => (x.id === id ? { ...x, urgent: true } : x)));
+      if (soundOn) audio.tone({ freq: 660, type: "square", duration: 0.1, gain: 0.06 });
+    }, 2400);
+    const t3 = setTimeout(() => {
+      setDistractions((prev) => {
+        const still = prev.find((x) => x.id === id);
+        if (!still) return prev; // already dismissed
+        if (soundOn) audio.sweep({ from: 400, to: 100, duration: 0.3, type: "sawtooth", gain: 0.1 });
+        setMisses((m) => m + 1);
+        setFrozen(true);
+        const tf = setTimeout(() => setFrozen(false), 350);
+        timeoutsRef.current.push(tf);
+        return prev.filter((x) => x.id !== id);
+      });
+    }, 3800);
+    timeoutsRef.current.push(t1, t2, t3);
   }, [soundOn]);
 
-  const clickDistraction = (id) => {
+  const dismissDistraction = (id) => {
     if (!running) return;
     setDistractions((prev) => prev.filter((x) => x.id !== id));
-    setMisses((m) => m + 1);
-    if (soundOn) audio.sweep({ from: 500, to: 140, duration: 0.22, type: "sawtooth", gain: 0.11 });
+    if (soundOn) audio.tone({ freq: 420, type: "sine", duration: 0.09, gain: 0.06 });
   };
 
   // Attention drift: if the current target sits too long, it relocates —
@@ -891,13 +1026,14 @@ function AdhdSim() {
         setNumbers((prev) => prev.map((n) => (n.num === target ? { ...n, restless: false } : n)));
       }, 500);
       timeoutsRef.current.push(clearT);
-    }, 1400);
+    }, 1800);
     return () => clearInterval(wander);
   }, [nextNum, running, soundOn]);
 
   const startFocus = () => {
     clearAllTimers();
     setDistractions([]);
+    setFrozen(false);
     setMisses(0);
     setNextNum(1);
     setRunning(true);
@@ -920,15 +1056,16 @@ function AdhdSim() {
       nums.push({ num: i, top, left, status: "pending" });
     }
     setNumbers(nums);
+    numbersRef.current = nums;
     startTimeRef.current = performance.now();
 
     if (distractOn) {
-      distractIntervalRef.current = setInterval(spawnDistraction, 650);
+      scheduleNextDistraction();
     }
   };
 
   const clickNum = (num) => {
-    if (!running) return;
+    if (!running || frozen) return;
     if (num !== nextNum) {
       setMisses((m) => m + 1);
       if (soundOn) audio.sweep({ from: 300, to: 120, duration: 0.18, type: "square", gain: 0.09 });
@@ -948,7 +1085,7 @@ function AdhdSim() {
       setDistractions([]);
       setRunning(false);
       const time = (performance.now() - startTimeRef.current) / 1000;
-      setReadout(`Done in ${time.toFixed(1)}s, with ${misses} misclick(s)/trap(s).`);
+      setReadout(`Done in ${time.toFixed(1)}s, with ${misses} misclick(s)/unhandled interruption(s).`);
       const penalty = misses * 8 + Math.max(0, time - 9) * 4;
       const score = Math.round(Math.max(0, Math.min(100, 100 - penalty)));
       setRating({ score, time: time.toFixed(1), misses, distractOn });
@@ -959,12 +1096,12 @@ function AdhdSim() {
     <div className="itw-sim">
       <div className="itw-sim-instructions">
         <strong>Task:</strong> click the numbers 1 through 10, in order, as fast as you can.
-        Dawdle on one and it'll wander off — you'll have to re-find it. The floating bubbles
-        are traps, not the task: clicking one costs you. Toggle distractions on or off and
-        compare your time.
+        Dawdle on one and it'll wander off. Interruptions will talk at you and demand a
+        response — tap the <strong>×</strong> to dismiss one before it wins; ignore it and it
+        freezes your focus for a moment. They come faster the longer you've been going.
       </div>
       <Viewfinder hud={{ left: running ? `TARGET ${nextNum}/10` : "READY", right: `MISS ${misses}` }}>
-        <div className="itw-focus-field">
+        <div className={`itw-focus-field${frozen ? " itw-frozen" : ""}`}>
           {numbers.map((n) => (
             <button
               key={n.num}
@@ -973,6 +1110,7 @@ function AdhdSim() {
               }${n.restless ? " itw-restless" : ""}`}
               style={{ top: `${n.top}%`, left: `${n.left}%` }}
               onClick={() => clickNum(n.num)}
+              disabled={frozen}
             >
               {n.num}
             </button>
@@ -980,13 +1118,21 @@ function AdhdSim() {
           {distractions.map((d) => (
             <div
               key={d.id}
-              className="itw-distraction"
+              className={`itw-distraction${d.urgent ? " itw-urgent" : ""}`}
               style={{ top: `${d.top}%`, left: `${d.left}%`, opacity: d.opacity }}
-              onClick={() => clickDistraction(d.id)}
             >
-              {d.text}
+              <span>{d.text}</span>
+              <button
+                type="button"
+                className="itw-distraction-x"
+                onClick={() => dismissDistraction(d.id)}
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
             </div>
           ))}
+          {frozen && <div className="itw-frozen-banner">Lost focus for a second — that interruption won.</div>}
         </div>
       </Viewfinder>
       <div className="itw-sim-controls">
@@ -1000,7 +1146,7 @@ function AdhdSim() {
             onChange={(e) => setDistractOn(e.target.checked)}
             style={{ accentColor: "var(--itw-adhd)" }}
           />
-          Simulate distractions
+          Simulate interruptions
         </label>
         <div className="itw-readout">{readout}</div>
       </div>
@@ -1009,12 +1155,12 @@ function AdhdSim() {
           title="Your task-completion score"
           score={rating.score}
           lines={[
-            `Finished in ${rating.time}s with ${rating.misses} misclick(s)/trap(s), distractions ${
+            `Finished in ${rating.time}s with ${rating.misses} misclick(s)/unhandled interruption(s), interruptions ${
               rating.distractOn ? "on" : "off"
             }.`,
             rating.distractOn
-              ? "Run it again with distractions off — most people finish faster and cleaner. That gap is roughly what constant, unfiltered pulls on attention cost, on every task, all day."
-              : "Now try it again with distractions on, and compare. The task never changed — only how much of your attention it was allowed to keep. Every wandering number is a beat of attention you had to spend just re-finding something you'd already located.",
+              ? "Run it again with interruptions off — most people finish faster and cleaner. That gap is roughly what constant, unfiltered pulls on attention cost, on every task, all day."
+              : "Now try it again with interruptions on, and compare. The task never changed — only how much of your attention it was allowed to keep. Every interruption you had to dismiss was a beat of focus spent on something that wasn't the task.",
           ]}
           onRetry={startFocus}
           retryLabel="Run it again"
@@ -1239,27 +1385,35 @@ function DyslexiaSim() {
         <button
           className={`itw-btn-ghost${mode === "typical" ? " itw-active" : ""}`}
           onClick={() => setMode("typical")}
+          disabled={awaitingQuiz}
         >
           Typical view
         </button>
         <button
           className={`itw-btn-ghost${mode === "simulated" ? " itw-active" : ""}`}
           onClick={() => setMode("simulated")}
+          disabled={awaitingQuiz}
         >
           Simulated view
         </button>
       </div>
       <Viewfinder
-        hud={{ left: mode === "simulated" ? "SIMULATED VIEW" : "TYPICAL VIEW", right: "" }}
+        hud={{ left: awaitingQuiz ? "PASSAGE HIDDEN" : mode === "simulated" ? "SIMULATED VIEW" : "TYPICAL VIEW", right: "" }}
         stageStyle={{ minHeight: "auto", background: "var(--itw-panel)" }}
       >
-        <div className={`itw-reading-passage${mode === "simulated" ? " itw-simulated" : ""}`}>
-          {chars.map((ch, i) => (
-            <span className="itw-ch" key={i} style={{ animationDelay: `${(i % 12) * 0.18}s` }}>
-              {ch}
-            </span>
-          ))}
-        </div>
+        {awaitingQuiz ? (
+          <div className="itw-passage-hidden">
+            <p>The passage is hidden now — answer from what you remember, the way a real reader has to.</p>
+          </div>
+        ) : (
+          <div className={`itw-reading-passage${mode === "simulated" ? " itw-simulated" : ""}`}>
+            {chars.map((ch, i) => (
+              <span className="itw-ch" key={i} style={{ animationDelay: `${(i % 12) * 0.18}s` }}>
+                {ch}
+              </span>
+            ))}
+          </div>
+        )}
       </Viewfinder>
       <div className="itw-sim-controls">
         <button className="itw-btn-primary" onClick={finishReading} disabled={awaitingQuiz}>
@@ -1339,70 +1493,122 @@ const PUSH_DECAY_PER_TICK = 3;
 const PUSH_GAIN_PER_TAP = 13;
 const PUSH_BASE = 40;
 
+const CONVO_PROMPTS = [
+  { npc: "Hey! Quick — tell me one thing that happened at school today.", time: 14, difficulty: 0 },
+  { npc: "Nice. What's your favorite thing to do after school?", time: 11, difficulty: 1 },
+  { npc: "Okay — if you could have any superpower, what would it be, and why?", time: 9, difficulty: 2 },
+  { npc: "Last one, fast: what did you have for breakfast this morning?", time: 7, difficulty: 3 },
+];
+
 function SpeechSim() {
   const { soundOn } = useContext(SettingsContext);
+  const [roundIdx, setRoundIdx] = useState(-1); // -1 = not started
   const [inputVal, setInputVal] = useState("");
-  const [phase, setPhase] = useState("idle"); // idle | running | done
-  const [outputWords, setOutputWords] = useState([]); // {text, blocked}
-  const [face, setFace] = useState("idle"); // idle | talking | blocked | done
-  const [pushWord, setPushWord] = useState(null); // current word being pushed through
+  const [submitted, setSubmitted] = useState(false);
+  const [outputWords, setOutputWords] = useState([]);
+  const [face, setFace] = useState("idle");
+  const [pushWord, setPushWord] = useState(null);
   const [pushProgress, setPushProgress] = useState(0);
   const [pushRequired, setPushRequired] = useState(0);
-  const [readout, setReadout] = useState("");
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [timeTotal, setTimeTotal] = useState(0);
+  const [note, setNote] = useState("");
+  const [results, setResults] = useState([]); // {success, timeUsed, taps}
   const [rating, setRating] = useState(null);
   const [tapBurst, setTapBurst] = useState(0);
 
+  const genRef = useRef(0);
+  const roundIdxRef = useRef(-1);
   const queueRef = useRef([]);
-  const idxRef = useRef(0);
-  const startRef = useRef(0);
-  const tapsRef = useRef(0);
-  const blockedCountRef = useRef(0);
+  const wordIdxRef = useRef(0);
+  const roundStartRef = useRef(0);
+  const tapsRoundRef = useRef(0);
   const progressRef = useRef(0);
+  const timerIntervalRef = useRef(null);
   const decayRef = useRef(null);
-  const cancelledRef = useRef(false);
+  const resultsRef = useRef([]);
+  const timeoutsRef = useRef([]);
+
+  const clearAll = () => {
+    clearInterval(timerIntervalRef.current);
+    clearInterval(decayRef.current);
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  };
 
   useEffect(() => {
     return () => {
-      cancelledRef.current = true;
-      clearInterval(decayRef.current);
+      genRef.current++;
+      clearAll();
       if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
     };
   }, []);
 
-  const finish = () => {
-    clearInterval(decayRef.current);
-    const total = (performance.now() - startRef.current) / 1000;
-    const words = queueRef.current;
-    setFace("done");
-    setPushWord(null);
-    setPhase("done");
-    setReadout(
-      `That took ${total.toFixed(1)}s and ${tapsRef.current} pushes to get the whole sentence out. You knew every word instantly — the effort was entirely in forcing it past the block, over and over.`
-    );
-    const idealTaps = words.length;
-    const extraTaps = Math.max(0, tapsRef.current - idealTaps);
-    const idealTime = words.length * 0.4;
-    const score = Math.round(
-      Math.max(15, Math.min(100, 100 - (total - idealTime) * 4 - extraTaps * 1.4))
-    );
+  const recordResult = (r) => {
+    resultsRef.current = [...resultsRef.current, r];
+    setResults(resultsRef.current);
+  };
+
+  const finishAll = () => {
+    const rs = resultsRef.current;
+    const successCount = rs.filter((r) => r.success).length;
+    const totalTaps = rs.reduce((a, r) => a + r.taps, 0);
+    const successTimes = rs.filter((r) => r.success).map((r) => r.timeUsed);
+    const avgTime = successTimes.length ? successTimes.reduce((a, b) => a + b, 0) / successTimes.length : 0;
+    const base = (successCount / CONVO_PROMPTS.length) * 70;
+    const efficiency = successCount ? Math.max(0, 30 - totalTaps * 1.1) : 0;
+    const score = Math.round(Math.max(5, Math.min(100, base + efficiency)));
+    setRoundIdx(CONVO_PROMPTS.length);
     setRating({
       score,
       lines: [
-        `${blockedCountRef.current} of ${words.length} word(s) needed to be pushed through, ${tapsRef.current} taps total, ${total.toFixed(1)}s all-in.`,
-        blockedCountRef.current > 0
-          ? "Every one of those pushes was for a word you already had ready — the block lived only in getting it out, not in thinking of it."
-          : "No blocks this run — try a longer or wordier sentence and see how the odds shift.",
+        `${successCount} of ${CONVO_PROMPTS.length} moment(s) answered in time, ${totalTaps} push(es) total${
+          successCount ? `, averaging ${avgTime.toFixed(1)}s when you made it` : ""
+        }.`,
+        rs.some((r) => !r.success)
+          ? "Every missed moment above was a question you knew the answer to — the conversation just didn't wait long enough for the words to arrive. That's the part a stopwatch on 'getting a word out' alone doesn't capture."
+          : "You beat the clock on every question, even with words blocking along the way — most real conversations don't leave this much room to try again.",
       ],
     });
   };
 
-  const beginWord = () => {
-    if (cancelledRef.current) return;
-    if (idxRef.current >= queueRef.current.length) {
-      finish();
+  const advance = (idx) => {
+    if (idx + 1 < CONVO_PROMPTS.length) beginRound(idx + 1);
+    else finishAll();
+  };
+
+  const momentPassed = (idx, gen) => {
+    if (gen !== genRef.current) return;
+    clearInterval(decayRef.current);
+    setPushWord(null);
+    setFace("idle");
+    setNote("The moment passed — time ran out before it all got out.");
+    recordResult({ success: false, timeUsed: CONVO_PROMPTS[idx].time, taps: tapsRoundRef.current });
+    const t = setTimeout(() => {
+      if (gen === genRef.current) advance(idx);
+    }, 1500);
+    timeoutsRef.current.push(t);
+  };
+
+  const beginWord = (gen) => {
+    if (gen !== genRef.current) return;
+    const idx = roundIdxRef.current;
+    if (wordIdxRef.current >= queueRef.current.length) {
+      clearInterval(timerIntervalRef.current);
+      setFace("done");
+      setNote("Got it all out in time.");
+      recordResult({
+        success: true,
+        timeUsed: (performance.now() - roundStartRef.current) / 1000,
+        taps: tapsRoundRef.current,
+      });
+      const t = setTimeout(() => {
+        if (gen === genRef.current) advance(idx);
+      }, 1200);
+      timeoutsRef.current.push(t);
       return;
     }
-    const w = queueRef.current[idxRef.current];
+    const w = queueRef.current[wordIdxRef.current];
     if (w.blocked) {
       progressRef.current = 0;
       setPushProgress(0);
@@ -1412,6 +1618,7 @@ function SpeechSim() {
       if (soundOn) audio.sweep({ from: 220, to: 260, duration: 0.25, type: "square", gain: 0.06 });
       clearInterval(decayRef.current);
       decayRef.current = setInterval(() => {
+        if (gen !== genRef.current) return clearInterval(decayRef.current);
         progressRef.current = Math.max(0, progressRef.current - PUSH_DECAY_PER_TICK);
         setPushProgress(progressRef.current);
       }, 180);
@@ -1419,27 +1626,26 @@ function SpeechSim() {
       setFace("talking");
       if (soundOn) {
         audio.tone({ freq: 340, type: "sine", duration: 0.08, gain: 0.06 });
-        speakText(w.text, { rate: 1.05, volume: 0.85 });
+        speakText(w.text, { rate: 1.1, volume: 0.85 });
       }
       setOutputWords((prev) => [...prev, { text: w.text, blocked: false }]);
-      idxRef.current++;
-      setTimeout(() => {
-        if (!cancelledRef.current) beginWord();
-      }, 200);
+      wordIdxRef.current++;
+      const t = setTimeout(() => beginWord(gen), 170);
+      timeoutsRef.current.push(t);
     }
   };
 
   const pushTap = () => {
-    if (phase !== "running" || pushWord == null) return;
-    tapsRef.current++;
+    const gen = genRef.current;
+    if (pushWord == null) return;
+    tapsRoundRef.current++;
     setTapBurst((n) => n + 1);
     progressRef.current = Math.min(pushRequired, progressRef.current + PUSH_GAIN_PER_TAP);
     setPushProgress(progressRef.current);
     if (soundOn) audio.tone({ freq: 260 + Math.random() * 90, type: "square", duration: 0.04, gain: 0.05 });
     if (progressRef.current >= pushRequired) {
       clearInterval(decayRef.current);
-      const w = queueRef.current[idxRef.current];
-      blockedCountRef.current++;
+      const w = queueRef.current[wordIdxRef.current];
       if (soundOn) {
         audio.tone({ freq: 540, type: "sine", duration: 0.14, gain: 0.1 });
         speakText(w.text, { rate: 0.9, volume: 0.85 });
@@ -1447,55 +1653,113 @@ function SpeechSim() {
       setFace("talking");
       setOutputWords((prev) => [...prev, { text: w.text, blocked: true }]);
       setPushWord(null);
-      idxRef.current++;
-      setTimeout(() => {
-        if (!cancelledRef.current) beginWord();
-      }, 260);
+      wordIdxRef.current++;
+      const t = setTimeout(() => beginWord(gen), 220);
+      timeoutsRef.current.push(t);
     }
   };
 
-  const speakIt = () => {
+  const submitAnswer = () => {
     const value = inputVal.trim();
-    if (!value) {
-      setReadout("Type something first — what do you want to say?");
-      return;
-    }
-    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
-    cancelledRef.current = false;
+    if (!value || submitted) return;
+    setSubmitted(true);
+    const gen = genRef.current;
+    const diff = CONVO_PROMPTS[roundIdxRef.current].difficulty;
     const words = value.split(/\s+/);
     queueRef.current = words.map((w) => {
-      const blockChance = w.length > 4 ? 0.5 : 0.25;
+      const blockChance = (w.length > 4 ? 0.42 : 0.2) + diff * 0.07;
       const isBlocked = Math.random() < blockChance;
-      return { text: w, blocked: isBlocked, required: isBlocked ? PUSH_BASE + w.length * 5 : 0 };
+      return {
+        text: w,
+        blocked: isBlocked,
+        required: isBlocked ? PUSH_BASE + w.length * 5 + diff * 10 : 0,
+      };
     });
-    idxRef.current = 0;
-    tapsRef.current = 0;
-    blockedCountRef.current = 0;
+    wordIdxRef.current = 0;
+    tapsRoundRef.current = 0;
     setOutputWords([]);
-    setRating(null);
-    setReadout("");
-    setFace("idle");
+    beginWord(gen);
+  };
+
+  const beginRound = (idx) => {
+    const gen = ++genRef.current;
+    clearAll();
+    roundIdxRef.current = idx;
+    setRoundIdx(idx);
+    setInputVal("");
+    setSubmitted(false);
+    setOutputWords([]);
     setPushWord(null);
-    setPhase("running");
-    startRef.current = performance.now();
-    beginWord();
+    setFace("idle");
+    setNote("");
+    const total = CONVO_PROMPTS[idx].time;
+    setTimeTotal(total);
+    setTimeLeft(total);
+    roundStartRef.current = performance.now();
+    if (soundOn) speakText(CONVO_PROMPTS[idx].npc, { rate: 1, volume: 0.9 });
+    timerIntervalRef.current = setInterval(() => {
+      if (gen !== genRef.current) return clearInterval(timerIntervalRef.current);
+      const elapsed = (performance.now() - roundStartRef.current) / 1000;
+      const remaining = total - elapsed;
+      if (remaining <= 0) {
+        setTimeLeft(0);
+        clearInterval(timerIntervalRef.current);
+        momentPassed(idx, gen);
+      } else {
+        setTimeLeft(remaining);
+      }
+    }, 60);
+  };
+
+  const start = () => {
+    resultsRef.current = [];
+    setResults([]);
+    setRating(null);
+    beginRound(0);
   };
 
   const pushPct = pushRequired ? Math.round((pushProgress / pushRequired) * 100) : 0;
+  const timerPct = timeTotal ? Math.max(0, Math.min(100, (timeLeft / timeTotal) * 100)) : 100;
+  const active = roundIdx >= 0 && roundIdx < CONVO_PROMPTS.length;
 
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        <strong>Task:</strong> type a short sentence describing the scene below, then click “Say
-        it.” When a word blocks, it won't come out on its own — you have to tap{" "}
-        <strong>Push</strong> rapidly to force it past the block before the bar drains back down.
+        <strong>Task:</strong> someone asks you {CONVO_PROMPTS.length} quick questions out loud,
+        one at a time, each with a shrinking window to answer. Type your reply and hit{" "}
+        <strong>Say it</strong> — if a word blocks, tap <strong>Push</strong> to force it out. If
+        the timer runs out first, the conversation moves on without you, mid-word if it has to.
       </div>
       <Viewfinder
-        hud={{ left: phase === "running" ? (pushWord ? "STUCK" : "SPEAKING…") : "READY", right: "" }}
+        hud={{ left: active ? `QUESTION ${roundIdx + 1}/${CONVO_PROMPTS.length}` : "READY", right: "" }}
         stageStyle={{ minHeight: "auto" }}
       >
+        {active && (
+          <div className="itw-round-timer">
+            <div
+              className="itw-round-timer-fill"
+              style={{ width: `${timerPct}%`, background: timerPct < 25 ? "#e5484d" : "var(--itw-speech)" }}
+            />
+          </div>
+        )}
         <div className="itw-speech-scene">
-          <div className="itw-scene-emoji">🎂🎈🎁</div>
+          {active ? (
+            <div className={`itw-convo-bubble${timerPct < 30 ? " itw-convo-impatient" : ""}`}>
+              {CONVO_PROMPTS[roundIdx].npc}
+            </div>
+          ) : roundIdx >= CONVO_PROMPTS.length ? (
+            <div className="itw-convo-bubble">That's everyone — see how it went below.</div>
+          ) : (
+            <div className="itw-convo-bubble itw-convo-idle">A quick back-and-forth is about to start.</div>
+          )}
+          {active && (
+            <div className={`itw-convo-partner${timerPct < 30 ? " itw-partner-waiting" : ""}`}>
+              {timerPct < 15 ? "😬" : timerPct < 30 ? "🤨" : "🙂"}
+              <span className="itw-partner-label">
+                {timerPct < 15 ? "waiting..." : timerPct < 30 ? "still there?" : "listening"}
+              </span>
+            </div>
+          )}
           <div className={`itw-speech-face${face === "blocked" ? " itw-straining" : ""}`}>
             {face === "blocked" ? "😣" : face === "talking" ? "🗣️" : face === "done" ? "🙂" : "😐"}
           </div>
@@ -1527,18 +1791,33 @@ function SpeechSim() {
         </div>
       </Viewfinder>
       <div className="itw-sim-controls" style={{ borderTop: "1px solid var(--itw-border)" }}>
-        <input
-          type="text"
-          className="itw-textin"
-          placeholder="It's my little brother's birthday party..."
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && speakIt()}
-          disabled={phase === "running"}
-        />
-        <button className="itw-btn-primary" onClick={speakIt} disabled={phase === "running"}>
-          Say it
-        </button>
+        {roundIdx === -1 && (
+          <button className="itw-btn-primary" onClick={start}>
+            Start the conversation
+          </button>
+        )}
+        {active && (
+          <>
+            <input
+              type="text"
+              className="itw-textin"
+              placeholder="Type your answer..."
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitAnswer()}
+              disabled={submitted}
+              autoFocus
+            />
+            <button className="itw-btn-primary" onClick={submitAnswer} disabled={submitted}>
+              Say it
+            </button>
+          </>
+        )}
+        {roundIdx >= CONVO_PROMPTS.length && (
+          <button className="itw-btn-primary" onClick={start}>
+            Try again
+          </button>
+        )}
       </div>
       <div style={{ padding: "0 18px 20px" }}>
         <div className="itw-speech-output">
@@ -1549,15 +1828,15 @@ function SpeechSim() {
           ))}
         </div>
         <div className="itw-readout" style={{ marginTop: 10 }}>
-          {readout}
+          {note}
         </div>
         {rating && (
           <RatingCard
-            title="Your delivery score"
+            title="Your conversation score"
             score={rating.score}
             lines={rating.lines}
-            onRetry={() => setRating(null)}
-            retryLabel="Try another sentence"
+            onRetry={start}
+            retryLabel="Try the conversation again"
           />
         )}
       </div>
