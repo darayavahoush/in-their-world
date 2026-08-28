@@ -151,6 +151,73 @@ class AudioEngine {
     });
     this.drones.delete(id);
   }
+
+  // A short, distinct sound tied to a *specific* sensory event (a chair
+  // scraping, a laugh, a slammed door) rather than generic static — each
+  // kind gets its own small signature built from the primitives above.
+  cue(kind, gain = 1) {
+    const g = Math.max(0.15, Math.min(1.4, gain));
+    switch (kind) {
+      case "laugh":
+        this.tone({ freq: 500, type: "triangle", duration: 0.09, gain: 0.12 * g });
+        this.tone({ freq: 640, type: "triangle", duration: 0.09, gain: 0.12 * g, delay: 0.1 });
+        this.tone({ freq: 580, type: "triangle", duration: 0.13, gain: 0.11 * g, delay: 0.21 });
+        break;
+      case "bell":
+        this.tone({ freq: 1050, type: "sine", duration: 0.35, gain: 0.14 * g });
+        this.tone({ freq: 1050, type: "sine", duration: 0.3, gain: 0.1 * g, delay: 0.38 });
+        break;
+      case "scrape":
+      case "screech":
+        this.sweep({ from: 900, to: 2600, duration: 0.35, type: "sawtooth", gain: 0.11 * g });
+        break;
+      case "buzzphone":
+        for (let i = 0; i < 5; i++) this.tone({ freq: 180, type: "square", duration: 0.05, gain: 0.07 * g, delay: i * 0.06 });
+        break;
+      case "slam":
+        this.noiseBurst({ duration: 0.18, gain: 0.16 * g, filterFreq: 400, type: "lowpass" });
+        break;
+      case "crash":
+        this.noiseBurst({ duration: 0.28, gain: 0.13 * g, filterFreq: 2600, type: "highpass" });
+        break;
+      case "shout":
+        this.noiseBurst({ duration: 0.2, gain: 0.12 * g, filterFreq: 1200 });
+        this.tone({ freq: 300, type: "sawtooth", duration: 0.22, gain: 0.1 * g, delay: 0.02 });
+        break;
+      case "whir":
+      case "hum":
+        this.tone({ freq: 150, type: "sawtooth", duration: 0.5, gain: 0.06 * g });
+        break;
+      case "footsteps":
+        this.tone({ freq: 90, type: "triangle", duration: 0.09, gain: 0.1 * g });
+        this.tone({ freq: 90, type: "triangle", duration: 0.09, gain: 0.1 * g, delay: 0.28 });
+        break;
+      case "argue":
+        this.tone({ freq: 340, type: "square", duration: 0.12, gain: 0.08 * g });
+        this.tone({ freq: 420, type: "square", duration: 0.12, gain: 0.08 * g, delay: 0.1 });
+        break;
+      case "rustle":
+        this.noiseBurst({ duration: 0.14, gain: 0.05 * g, filterFreq: 3400, type: "highpass" });
+        break;
+      case "tray":
+        this.noiseBurst({ duration: 0.3, gain: 0.14 * g, filterFreq: 2200, type: "bandpass" });
+        break;
+      case "tap":
+        this.tone({ freq: 900, type: "square", duration: 0.03, gain: 0.06 * g });
+        this.tone({ freq: 900, type: "square", duration: 0.03, gain: 0.06 * g, delay: 0.14 });
+        break;
+      case "call":
+        this.tone({ freq: 500, type: "sine", duration: 0.18, gain: 0.1 * g });
+        this.tone({ freq: 500, type: "sine", duration: 0.18, gain: 0.1 * g, delay: 0.35 });
+        break;
+      case "flicker":
+        this.tone({ freq: 2200, type: "square", duration: 0.02, gain: 0.03 * g });
+        this.tone({ freq: 2200, type: "square", duration: 0.02, gain: 0.03 * g, delay: 0.08 });
+        break;
+      default:
+        this.noiseBurst({ duration: 0.15, gain: 0.08 * g });
+    }
+  }
 }
 
 const audio = new AudioEngine();
@@ -239,50 +306,48 @@ const MODULE_ICONS = {
   ),
 };
 
-/* A silent, looping, DOM-built preview of each module's core moment —
+/* A tiny, auto-playing, DOM-built preview of each module's core moment —
    answers "what does this look like" without a video file to host or load. */
-function ModuleDemoScene({ moduleKey }) {
+function CardPreview({ moduleKey }) {
   if (moduleKey === "autism") {
     return (
-      <>
-        <div className="itw-demo-dot" />
-        <div className="itw-demo-decoy" />
-        <div className="itw-demo-decoy" />
-        <div className="itw-demo-decoy" />
-        <span className="itw-demo-tag">chair scraping</span>
-        <span className="itw-demo-tag">someone's laughing</span>
-        <span className="itw-demo-tag">the fan is loud</span>
-      </>
+      <div className="itw-cp-stage">
+        <span className="itw-cp-dot itw-cp-target" />
+        <span className="itw-cp-dot itw-cp-decoy" style={{ top: "62%", left: "58%" }} />
+        <span className="itw-cp-dot itw-cp-decoy" style={{ top: "70%", left: "18%", animationDelay: ".35s" }} />
+        <span className="itw-cp-chip">🪑 chair scraping</span>
+      </div>
     );
   }
   if (moduleKey === "adhd") {
     return (
-      <>
-        <div className="itw-demo-num">1</div>
-        <div className="itw-demo-num">2</div>
-        <div className="itw-demo-num">3</div>
-        <div className="itw-demo-num">4</div>
-        <span className="itw-demo-tag">don't forget your homework</span>
-      </>
+      <div className="itw-cp-stage">
+        <span className="itw-cp-num">4</span>
+        <span className="itw-cp-num itw-cp-num-2">7</span>
+        <span className="itw-cp-bubble">New message!</span>
+      </div>
     );
   }
   if (moduleKey === "dyslexia") {
     return (
-      <>
-        <div className="itw-demo-line" />
-        <div className="itw-demo-line" />
-        <div className="itw-demo-letter">b</div>
-      </>
+      <div className="itw-cp-stage itw-cp-stage-text">
+        <span className="itw-cp-word">
+          {"b/d p/q".split("").map((ch, i) => (
+            <span key={i} className="itw-cp-letter" style={{ animationDelay: `${i * 0.12}s` }}>
+              {ch}
+            </span>
+          ))}
+        </span>
+      </div>
     );
   }
   // speech
   return (
-    <>
-      <div className="itw-demo-word">the... the dog ran</div>
-      <div className="itw-demo-wave">
-        <span /><span /><span /><span /><span />
-      </div>
-    </>
+    <div className="itw-cp-stage itw-cp-stage-text">
+      <span className="itw-cp-word">
+        I w<span className="itw-cp-blocked">-w-w</span>ant to...
+      </span>
+    </div>
   );
 }
 
@@ -292,6 +357,7 @@ function Landing({ onSelect }) {
     <section className="itw-view">
       <div className="itw-blob itw-blob-1" />
       <div className="itw-blob itw-blob-2" />
+      <div className="itw-blob itw-blob-3" />
       <div className="itw-masthead">
         <div className="itw-eyebrow itw-rise itw-rise-1">Experience What They Feel</div>
         <h1 className="itw-title itw-rise itw-rise-2">
@@ -312,10 +378,6 @@ function Landing({ onSelect }) {
       <div className="itw-bento itw-rise itw-rise-5">
         {MODULES.map((m, i) => (
           <button key={m.key} className={`itw-mcard itw-bento-${i}`} data-m={m.key} onClick={() => onSelect(m.key)}>
-            <div className={`itw-mcard-demo itw-demo-${m.key}`} aria-hidden="true">
-              <span className="itw-mcard-demo-label">Preview</span>
-              <ModuleDemoScene moduleKey={m.key} />
-            </div>
             <div className="itw-mcard-body">
               <div className="itw-mcard-top">
                 <div className="itw-mcard-icon">{MODULE_ICONS[m.key]}</div>
@@ -323,6 +385,12 @@ function Landing({ onSelect }) {
               </div>
               <h3>{m.name}</h3>
               <p>{m.blurb}</p>
+              <div className="itw-cp-label">
+                Preview <span className="itw-cp-live" />
+              </div>
+              <div className="itw-card-preview">
+                <CardPreview moduleKey={m.key} />
+              </div>
               <div className="itw-mcard-bottom">
                 <div className="itw-stat">
                   <b>{country === "in" ? m.statBigIN : m.statBig}</b>
@@ -559,32 +627,26 @@ function HowTo({ steps }) {
 
 /* ================= AUTISM: sensory overload simulator ================= */
 
-const NOISE_PHRASES = [
-  "PAY ATTENTION", "chair scraping", "someone's laughing", "the light is humming",
-  "bell in 3...2...", "don't forget your homework", "LOOK AT ME WHEN I TALK",
-  "whose backpack is this", "the fan is loud", "hallway noise", "someone dropped a tray",
-  "fluorescent flicker", "five more minutes", "line up now", "where's your pencil", "recess is over",
-  "STOP TALKING", "someone's phone buzzing", "the projector hum", "footsteps behind you",
-  "chalk squeaking", "two kids arguing", "door slamming", "your name, called twice",
-];
-const NOISE_COLORS = ["#4fb3a6", "#e8a23d", "#e37b6e", "#a48ce0", "#ffffff"];
-
-// Named sensory events with a real icon each — rendered instead of abstract
-// "static" blobs, so the overload reads as specific things actually
-// happening around a kid, not decoration.
+// Concrete sensory events, each with its own icon and its own synthesized
+// sound (see AudioEngine.cue) — this is what's actually competing for
+// attention, not abstract static.
 const SOUND_EVENTS = [
-  { label: "chair scraping", icon: "🪑" },
-  { label: "someone's laughing", icon: "😂" },
-  { label: "the fan is loud", icon: "🌀" },
-  { label: "phone buzzing", icon: "📳" },
-  { label: "door slamming", icon: "🚪" },
-  { label: "footsteps behind you", icon: "👣" },
-  { label: "papers rustling", icon: "📄" },
-  { label: "bell ringing", icon: "🔔" },
-  { label: "someone dropped a tray", icon: "🍽️" },
-  { label: "fluorescent flicker", icon: "💡" },
-  { label: "two kids arguing", icon: "🗣️" },
-  { label: "pencil tapping", icon: "✏️" },
+  { text: "chair scraping", icon: "🪑", kind: "scrape" },
+  { text: "someone's laughing", icon: "😄", kind: "laugh" },
+  { text: "the light is humming", icon: "💡", kind: "hum" },
+  { text: "bell in 3...2...", icon: "🔔", kind: "bell" },
+  { text: "LOOK AT ME WHEN I TALK", icon: "📢", kind: "shout" },
+  { text: "the fan is loud", icon: "🌀", kind: "whir" },
+  { text: "papers rustling", icon: "📄", kind: "rustle" },
+  { text: "someone dropped a tray", icon: "🍽️", kind: "tray" },
+  { text: "someone's phone buzzing", icon: "📳", kind: "buzzphone" },
+  { text: "footsteps behind you", icon: "👣", kind: "footsteps" },
+  { text: "chalk squeaking", icon: "✏️", kind: "screech" },
+  { text: "two kids arguing", icon: "🗣️", kind: "argue" },
+  { text: "door slamming", icon: "🚪", kind: "slam" },
+  { text: "your name, called twice", icon: "🙋", kind: "call" },
+  { text: "fluorescent flicker", icon: "💡", kind: "flicker" },
+  { text: "pencil tapping", icon: "✏️", kind: "tap" },
 ];
 
 const TOTAL_ROUNDS = 8;
@@ -615,36 +677,44 @@ function AutismSim() {
   const intensity = phase === "task" ? taskIntensity : practiceIntensity;
   const camouflage = phase === "task" ? Math.min(0.85, Math.max(0, (round - 2) * 0.16)) : 0;
 
-  const noiseItems = useMemo(
-    () =>
-      NOISE_PHRASES.map((text, i) => ({
-        id: i,
-        text,
-        top: Math.random() * 90,
-        left: Math.random() * 80,
-        color: NOISE_COLORS[i % NOISE_COLORS.length],
-        baseOpacity: 0.35 + Math.random() * 0.5,
-        duration: 2 + Math.random() * 3,
-      })),
-    []
-  );
-  // Sound bursts: each one is a real, named sensory event (not an abstract
-  // blob) that pops in, holds, and pops out — like an actual sound arriving.
-  const soundBursts = useMemo(
-    () =>
-      Array.from({ length: 16 }).map((_, i) => {
-        const ev = SOUND_EVENTS[i % SOUND_EVENTS.length];
-        return {
-          id: i,
-          ...ev,
-          top: 4 + Math.random() * 84,
-          left: 4 + Math.random() * 76,
-          delay: Math.random() * 4,
-          duration: 2.6 + Math.random() * 2.2,
-        };
-      }),
-    []
-  );
+  // Sensory-event chips: each pops in with an icon + its actual label
+  // ("chair scraping", "someone's laughing"...) and fires its own matching
+  // synthesized sound. Spawn rate and loudness scale with intensity — this
+  // stands in for the abstract "static" the old version showed.
+  const [cues, setCues] = useState([]);
+  const cueIdRef = useRef(0);
+  const cueTimeoutsRef = useRef([]);
+  const intensityBucket = Math.round(intensity * 10);
+
+  useEffect(() => {
+    cueTimeoutsRef.current.forEach(clearTimeout);
+    cueTimeoutsRef.current = [];
+    if (phase === "done") return;
+    let cancelled = false;
+    const spawn = () => {
+      if (cancelled) return;
+      const evt = SOUND_EVENTS[Math.floor(Math.random() * SOUND_EVENTS.length)];
+      const id = cueIdRef.current++;
+      const top = 8 + Math.random() * 74;
+      const left = 4 + Math.random() * 76;
+      setCues((prev) => [...prev.slice(-6), { id, ...evt, top, left }]);
+      if (soundOn) audio.cue(evt.kind, 0.4 + (intensityBucket / 10) * 0.9);
+      const life = setTimeout(() => {
+        setCues((prev) => prev.filter((c) => c.id !== id));
+      }, 1500 + Math.random() * 600);
+      const delay = Math.max(240, 1500 - (intensityBucket / 10) * 1150 + Math.random() * 450);
+      const next = setTimeout(spawn, delay);
+      cueTimeoutsRef.current.push(life, next);
+    };
+    const kick = setTimeout(spawn, 260);
+    cueTimeoutsRef.current.push(kick);
+    return () => {
+      cancelled = true;
+      cueTimeoutsRef.current.forEach(clearTimeout);
+      cueTimeoutsRef.current = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, intensityBucket, soundOn]);
 
   useEffect(() => {
     if (!soundOn) {
@@ -843,38 +913,16 @@ function AutismSim() {
             ))}
           </>
         )}
-        {noiseItems.map((n) => (
+        {cues.map((c) => (
           <div
-            key={n.id}
-            className="itw-noise-item"
-            style={{
-              top: `${n.top}%`,
-              left: `${n.left}%`,
-              color: n.color,
-              opacity: (n.baseOpacity * intensity).toFixed(2),
-              animation: `itw-floaty ${n.duration}s ease-in-out infinite`,
-            }}
+            key={c.id}
+            className="itw-sound-cue"
+            style={{ top: `${c.top}%`, left: `${c.left}%` }}
           >
-            {n.text}
+            <span className="itw-cue-icon" aria-hidden="true">{c.icon}</span>
+            <span className="itw-cue-text">{c.text}</span>
           </div>
         ))}
-        {intensity > 0.08 &&
-          soundBursts.map((b) => (
-            <div
-              key={b.id}
-              className="itw-sound-burst"
-              style={{
-                top: `${b.top}%`,
-                left: `${b.left}%`,
-                animation: `itw-burst ${b.duration}s ease-in-out ${b.delay}s infinite`,
-                opacity: Math.min(1, intensity + 0.15),
-              }}
-            >
-              <span className="itw-sound-burst-icon">{b.icon}</span>
-              {b.label}
-            </div>
-          ))}
-        <div className="itw-flicker-overlay" style={{ opacity: (intensity * 0.15).toFixed(2) }} />
       </Viewfinder>
       <div className="itw-sim-controls">
         {phase === "intro" && (

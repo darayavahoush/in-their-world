@@ -93,8 +93,8 @@
 }
 .itw-eyebrow::before{content:"✦";font-size:10px;color:var(--itw-accent);}
 .itw-title{
-  font-family:var(--font-display);font-weight:800;font-size:clamp(38px,6.6vw,62px);
-  line-height:1.08;margin:22px 0 22px;letter-spacing:-.01em;
+  font-family:var(--font-display);font-weight:800;font-size:clamp(40px,7.2vw,68px);
+  line-height:1.05;margin:22px 0 22px;letter-spacing:-.015em;
 }
 .itw-title em{font-style:normal;font-weight:800;color:var(--itw-accent);}
 .itw-lede{font-size:17.5px;color:var(--itw-muted);max-width:58ch;margin:0 0 8px;}
@@ -111,9 +111,10 @@
 }
 .itw-grid-eyebrow::after{content:"";flex:1;height:1px;background:var(--itw-border);}
 
-.itw-blob{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;z-index:0;opacity:.5;}
-.itw-blob-1{width:420px;height:420px;background:radial-gradient(circle,var(--itw-autism-soft),transparent 70%);top:-120px;right:-100px;}
-.itw-blob-2{width:360px;height:360px;background:radial-gradient(circle,var(--itw-speech-soft),transparent 70%);top:420px;left:-140px;}
+.itw-blob{position:absolute;border-radius:50%;filter:blur(64px);pointer-events:none;z-index:0;opacity:.68;}
+.itw-blob-1{width:480px;height:480px;background:radial-gradient(circle,var(--itw-autism-soft),transparent 70%);top:-140px;right:-120px;}
+.itw-blob-2{width:420px;height:420px;background:radial-gradient(circle,var(--itw-speech-soft),transparent 70%);top:420px;left:-160px;}
+.itw-blob-3{width:320px;height:320px;background:radial-gradient(circle,var(--itw-adhd-soft),transparent 70%);top:120px;left:38%;opacity:.5;}
 
 .itw-accent-word{position:relative;display:inline-block;font-style:normal;color:var(--itw-autism);}
 .itw-squiggle{position:absolute;left:0;bottom:-10px;width:100%;height:12px;color:var(--itw-adhd);}
@@ -128,40 +129,22 @@
 }
 
 .itw-mcard{
-  position:relative;background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:18px;
-  padding:0 0 22px;cursor:pointer;text-align:left;overflow:hidden;width:100%;min-height:250px;
-  transition:transform .2s cubic-bezier(.2,.8,.3,1), border-color .2s ease, box-shadow .2s ease;
+  position:relative;background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:20px;
+  padding:26px 0 22px;cursor:pointer;text-align:left;overflow:hidden;width:100%;min-height:250px;
+  transition:transform .22s cubic-bezier(.2,.8,.3,1), border-color .2s ease, box-shadow .22s ease;
   font-family:inherit;color:inherit;display:flex;flex-direction:column;
-  box-shadow:0 10px 26px -20px rgba(40,54,44,.18);
+  box-shadow:0 14px 30px -22px rgba(40,54,44,.24);
+  border-top:3px solid transparent;
 }
 .itw-mcard:hover, .itw-mcard:focus-visible{
-  transform:translateY(-6px) scale(1.008);border-color:var(--card-accent);
-  box-shadow:0 26px 48px -22px rgba(40,54,44,.28);
+  transform:translateY(-8px) scale(1.012);border-color:var(--card-accent);
+  border-top-color:var(--card-accent);
+  box-shadow:0 32px 56px -20px rgba(40,54,44,.34), 0 0 0 1px var(--card-accent-soft);
 }
 .itw-mcard::before{display:none;}
 .itw-mcard-blob{display:none;}
 
-/* Live micro-preview — a miniature of the real viewfinder, always looping,
-   so "what does this look like" is answered by watching it rather than
-   reading about it. Built entirely from CSS/DOM, so it costs nothing to
-   load and never buffers. */
-.itw-mcard-demo{
-  position:relative;height:108px;margin:0 0 18px;overflow:hidden;
-  background:
-    repeating-linear-gradient(rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px, transparent 1px, transparent 3px),
-    #100e0b;
-  border-bottom:1px solid var(--itw-border);
-}
-.itw-mcard-demo::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 140% at 50% 30%, transparent 50%, rgba(0,0,0,.6) 100%);pointer-events:none;}
-.itw-mcard-demo-label{
-  position:absolute;top:8px;left:10px;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;
-  text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:5px;
-}
-.itw-mcard-demo-label::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--card-accent);animation:itw-hud-blink 1.4s ease-in-out infinite;}
-.itw-mcard:hover .itw-mcard-demo{background:
-    repeating-linear-gradient(rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 1px, transparent 1px, transparent 3px),
-    #14110d;}
-
+/* ---------- mini demo preview (auto-playing loop on every card) ---------- */
 .itw-mcard-body{position:relative;z-index:1;padding:0 24px;display:flex;flex-direction:column;flex:1;}
 .itw-mcard-top{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-bottom:14px;}
 .itw-mcard-icon{
@@ -171,10 +154,8 @@
 .itw-mcard-icon svg{width:22px;height:22px;}
 .itw-mcard .itw-tag{font-family:var(--font-mono);font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--card-accent);}
 .itw-mcard h3{position:relative;z-index:1;font-family:var(--font-display);font-weight:800;font-size:24px;margin:0 0 8px;}
-.itw-mcard p{position:relative;z-index:1;font-size:14.5px;color:var(--itw-muted);margin:0 0 18px;line-height:1.55;flex:1;}
-.itw-mcard-bottom{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-.itw-mcard p{position:relative;z-index:1;font-size:14.5px;color:var(--itw-muted);margin:0 0 18px;line-height:1.55;flex:1;}
-.itw-mcard-bottom{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.itw-mcard p{position:relative;z-index:1;font-size:14.5px;color:var(--itw-muted);margin:0 0 16px;line-height:1.55;}
+.itw-mcard-bottom{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:auto;}
 .itw-mcard .itw-stat{display:flex;flex-direction:column;gap:2px;max-width:60%;}
 .itw-mcard .itw-stat b{font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--card-accent);line-height:1;}
 .itw-mcard .itw-stat span{font-size:11.5px;color:var(--itw-muted-dim);line-height:1.3;}
@@ -191,70 +172,43 @@
 .itw-mcard[data-m="dyslexia"]{--card-accent:var(--itw-dyslexia);--card-accent-soft:var(--itw-dyslexia-soft);}
 .itw-mcard[data-m="speech"]{--card-accent:var(--itw-speech);--card-accent-soft:var(--itw-speech-soft);}
 
-/* ---------- per-module demo scenes (looping micro-preview, no video file) ---------- */
-.itw-demo-dot{position:absolute;width:12px;height:12px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 5px rgba(229,72,77,.18),0 0 14px rgba(229,72,77,.5);}
-.itw-demo-decoy{position:absolute;width:12px;height:12px;border-radius:50%;background:#c95a4e;opacity:.55;}
-.itw-demo-tag{
-  position:absolute;font-family:var(--font-mono);font-size:9px;font-weight:700;color:#fff;letter-spacing:.03em;
-  white-space:nowrap;opacity:0;
+.itw-cp-label{
+  position:relative;z-index:1;display:flex;align-items:center;gap:6px;margin:0 0 8px;
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--itw-muted-dim);
 }
-
-/* autism: a real target among decoys, sound-labels flickering in */
-.itw-demo-autism .itw-demo-dot{top:44%;left:20%;animation:itw-target-pulse 1.4s ease-in-out infinite;}
-.itw-demo-autism .itw-demo-decoy:nth-child(2){top:20%;left:62%;}
-.itw-demo-autism .itw-demo-decoy:nth-child(3){top:65%;left:75%;}
-.itw-demo-autism .itw-demo-decoy:nth-child(4){top:70%;left:40%;}
-.itw-demo-autism .itw-demo-tag:nth-child(5){top:12%;left:38%;animation:itw-demo-blip 3.6s ease-in-out infinite;}
-.itw-demo-autism .itw-demo-tag:nth-child(6){top:55%;left:55%;animation:itw-demo-blip 3.6s ease-in-out 1.2s infinite;}
-.itw-demo-autism .itw-demo-tag:nth-child(7){top:78%;left:14%;animation:itw-demo-blip 3.6s ease-in-out 2.4s infinite;}
-@keyframes itw-demo-blip{0%,100%{opacity:0;transform:translateY(3px);}10%,30%{opacity:.85;transform:translateY(0);}40%{opacity:0;}}
-
-/* adhd: numbers waiting to be clicked in order, one distraction popping in */
-.itw-demo-num{
-  position:absolute;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-mono);font-weight:700;font-size:11px;color:#fff;border:1.5px solid rgba(255,255,255,.25);
+.itw-cp-live{width:6px;height:6px;border-radius:50%;background:var(--card-accent);animation:itw-target-pulse 1.3s ease-in-out infinite;}
+.itw-card-preview{
+  position:relative;z-index:1;margin-bottom:16px;border-radius:14px;overflow:hidden;
+  background:#1a1610;box-shadow:inset 0 0 24px rgba(0,0,0,.3);
 }
-.itw-demo-adhd .itw-demo-num:nth-child(1){top:30%;left:16%;background:var(--itw-adhd);animation:itw-demo-done 4s ease-in-out infinite;}
-.itw-demo-adhd .itw-demo-num:nth-child(2){top:60%;left:36%;background:rgba(255,255,255,.08);animation:itw-demo-done 4s ease-in-out .5s infinite;}
-.itw-demo-adhd .itw-demo-num:nth-child(3){top:22%;left:58%;background:rgba(255,255,255,.08);animation:itw-demo-done 4s ease-in-out 1s infinite;}
-.itw-demo-adhd .itw-demo-num:nth-child(4){top:55%;left:78%;background:rgba(255,255,255,.08);animation:itw-demo-done 4s ease-in-out 1.5s infinite;}
-@keyframes itw-demo-done{0%,10%{background:rgba(255,255,255,.08);transform:scale(1);}18%,30%{background:var(--itw-adhd);transform:scale(1.15);}38%,100%{background:rgba(255,255,255,.08);transform:scale(1);}}
-.itw-demo-adhd .itw-demo-tag:nth-child(5){top:10%;left:30%;color:var(--itw-adhd);animation:itw-demo-blip 4s ease-in-out .2s infinite;}
-
-/* dyslexia: a letter flipping b/d, line swimming */
-.itw-demo-letter{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-display);
-  font-weight:800;font-size:46px;color:var(--itw-dyslexia);animation:itw-demo-flip 2.8s ease-in-out infinite;
+.itw-cp-stage{position:relative;height:76px;}
+.itw-cp-stage-text{display:flex;align-items:center;justify-content:center;padding:0 16px;text-align:center;}
+.itw-cp-dot{position:absolute;width:15px;height:15px;border-radius:50%;top:38%;left:26%;}
+.itw-cp-target{background:#e5484d;box-shadow:0 0 0 6px rgba(229,72,77,.2);animation:itw-target-pulse 1.2s ease-in-out infinite;}
+.itw-cp-decoy{background:#c95a4e;opacity:.65;animation:itw-decoy-flicker .85s steps(3) infinite;}
+.itw-cp-chip{
+  position:absolute;bottom:9px;right:10px;background:rgba(255,255,255,.12);color:#fff;
+  font-size:10.5px;font-family:var(--font-body);font-weight:700;padding:4px 10px;border-radius:99px;
+  animation:itw-cue-cycle 2.4s ease infinite;
 }
-@keyframes itw-demo-flip{0%,35%{transform:translate(-50%,-50%) scaleX(1);}50%,85%{transform:translate(-50%,-50%) scaleX(-1);}100%{transform:translate(-50%,-50%) scaleX(1);}}
-.itw-demo-line{position:absolute;left:14%;right:14%;height:2px;background:rgba(140,103,168,.35);border-radius:2px;}
-.itw-demo-dyslexia .itw-demo-line:nth-child(2){top:30%;animation:itw-demo-swim 3.4s ease-in-out infinite;}
-.itw-demo-dyslexia .itw-demo-line:nth-child(3){top:74%;animation:itw-demo-swim 3.4s ease-in-out .6s infinite;}
-@keyframes itw-demo-swim{0%,100%{transform:translateX(0) scaleX(1);}50%{transform:translateX(6px) scaleX(.92);}}
-
-/* speech: a word trying to land, glitching between attempts */
-.itw-demo-word{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-mono);
-  font-weight:700;font-size:15px;color:var(--itw-speech);letter-spacing:.02em;animation:itw-demo-stutter 3.2s ease-in-out infinite;
+.itw-cp-num{
+  position:absolute;top:50%;left:22%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;
+  background:var(--itw-panel-2);border:2px solid var(--itw-adhd);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:12px;
+  animation:itw-num-shake 2.4s ease-in-out infinite;
 }
-@keyframes itw-demo-stutter{
-  0%,8%{content:"";opacity:.3;}
-  0%,18%{opacity:.35;transform:translate(-50%,-50%) translateX(-2px);}
-  22%,30%{opacity:.35;transform:translate(-50%,-50%) translateX(2px);}
-  45%,60%{opacity:1;transform:translate(-50%,-50%) translateX(0);}
-  75%,100%{opacity:.35;}
+.itw-cp-num-2{left:auto;right:16%;top:62%;border-color:var(--itw-adhd);opacity:.7;animation-delay:.6s;}
+.itw-cp-bubble{
+  position:absolute;top:18%;right:9%;background:var(--itw-panel);color:var(--itw-text);font-size:10.5px;
+  font-weight:700;padding:5px 11px;border-radius:12px;animation:itw-cue-cycle 2.4s ease infinite;
 }
-.itw-demo-wave{position:absolute;bottom:16px;left:0;right:0;display:flex;align-items:flex-end;justify-content:center;gap:3px;height:22px;}
-.itw-demo-wave span{width:3px;background:var(--itw-speech);opacity:.5;border-radius:2px;animation:itw-demo-bar 1.4s ease-in-out infinite;}
-.itw-demo-wave span:nth-child(1){height:40%;animation-delay:0s;}
-.itw-demo-wave span:nth-child(2){height:90%;animation-delay:.15s;}
-.itw-demo-wave span:nth-child(3){height:60%;animation-delay:.3s;}
-.itw-demo-wave span:nth-child(4){height:100%;animation-delay:.45s;}
-.itw-demo-wave span:nth-child(5){height:50%;animation-delay:.6s;}
-@keyframes itw-demo-bar{0%,100%{transform:scaleY(.6);opacity:.4;}50%{transform:scaleY(1);opacity:.9;}}
+.itw-cp-word{font-family:var(--font-display);color:#fff;font-size:15px;}
+.itw-cp-letter{display:inline-block;animation:itw-letter-jitter 1.6s ease-in-out infinite;}
+.itw-cp-blocked{color:var(--itw-speech);font-family:var(--font-mono);animation:itw-word-shake .16s ease-in-out infinite;}
 
 @media (prefers-reduced-motion: reduce){
-  .itw-mcard-demo *{animation:none !important;}
+  .itw-card-preview *{animation:none !important;}
   .itw-viewfinder-stage::before{animation:none !important;}
 }
 
@@ -407,24 +361,20 @@
 .itw-decoy-target{position:absolute;z-index:5;text-align:center;cursor:pointer;}
 .itw-decoy-target .itw-dot{width:46px;height:46px;border-radius:50%;background:#c95a4e;margin:0 auto;box-shadow:0 0 0 10px rgba(201,90,78,.15), 0 0 30px rgba(201,90,78,.35);animation:itw-decoy-flicker 0.9s steps(3) infinite;}
 @keyframes itw-decoy-flicker{0%,100%{transform:scale(1);}33%{transform:scale(1.1);}66%{transform:scale(0.96);}}
-.itw-noise-item{position:absolute;font-family:var(--font-mono);font-size:15px;font-weight:700;color:rgba(255,255,255,.5);white-space:nowrap;will-change:transform,opacity;z-index:2;}
-.itw-flicker-overlay{position:absolute;inset:0;background:#fff;mix-blend-mode:overlay;pointer-events:none;}
-@keyframes itw-floaty{0%,100%{transform:translate(0,0);}50%{transform:translate(6px,-6px);}}
-
-/* Named sound events — each one a real thing (a chair, a laugh, a bell),
-   not an abstract shape, arriving like a sound actually would: a quick
-   pop-in, a hold, a pop-out. */
-.itw-sound-burst{
-  position:absolute;z-index:6;display:inline-flex;align-items:center;gap:6px;
-  font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:#fff;white-space:nowrap;
-  background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.16);border-radius:99px;
-  padding:5px 12px 5px 8px;backdrop-filter:blur(1px);transform-origin:center;will-change:transform,opacity;
+.itw-sound-cue{
+  position:absolute;display:flex;align-items:center;gap:8px;z-index:4;pointer-events:none;
+  background:rgba(20,16,10,.78);border:1px solid rgba(255,255,255,.16);color:#fff;
+  padding:7px 15px 7px 9px;border-radius:99px;font-family:var(--font-body);font-weight:700;
+  font-size:13.5px;white-space:nowrap;backdrop-filter:blur(3px);
+  box-shadow:0 10px 24px -10px rgba(0,0,0,.65);
+  animation:itw-cue-cycle 2s cubic-bezier(.2,.85,.3,1) both;
 }
-.itw-sound-burst-icon{font-size:14px;line-height:1;}
-@keyframes itw-burst{
-  0%,100%{opacity:0;transform:scale(.7);}
-  8%,22%{opacity:1;transform:scale(1);}
-  30%{opacity:0;transform:scale(.85);}
+.itw-cue-icon{font-size:17px;line-height:1;}
+@keyframes itw-cue-cycle{
+  0%{opacity:0;transform:translateY(6px) scale(.75);}
+  14%{opacity:1;transform:translateY(0) scale(1);}
+  78%{opacity:1;transform:translateY(0) scale(1);}
+  100%{opacity:0;transform:translateY(-8px) scale(.92);}
 }
 .itw-round-pips{display:flex;gap:6px;}
 .itw-round-pips span{width:9px;height:9px;border-radius:50%;border:1px solid var(--itw-border);background:transparent;}
