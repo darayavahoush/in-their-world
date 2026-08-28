@@ -128,8 +128,8 @@
 }
 
 .itw-mcard{
-  position:relative;background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:24px;
-  padding:26px 26px 24px;cursor:pointer;text-align:left;overflow:hidden;width:100%;min-height:250px;
+  position:relative;background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:18px;
+  padding:0 0 22px;cursor:pointer;text-align:left;overflow:hidden;width:100%;min-height:250px;
   transition:transform .2s cubic-bezier(.2,.8,.3,1), border-color .2s ease, box-shadow .2s ease;
   font-family:inherit;color:inherit;display:flex;flex-direction:column;
   box-shadow:0 10px 26px -20px rgba(40,54,44,.18);
@@ -139,19 +139,38 @@
   box-shadow:0 26px 48px -22px rgba(40,54,44,.28);
 }
 .itw-mcard::before{display:none;}
-.itw-mcard-blob{
-  position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;
-  background:var(--card-accent-soft, var(--itw-accent-soft));z-index:0;transition:transform .3s ease;
+.itw-mcard-blob{display:none;}
+
+/* Live micro-preview — a miniature of the real viewfinder, always looping,
+   so "what does this look like" is answered by watching it rather than
+   reading about it. Built entirely from CSS/DOM, so it costs nothing to
+   load and never buffers. */
+.itw-mcard-demo{
+  position:relative;height:108px;margin:0 0 18px;overflow:hidden;
+  background:
+    repeating-linear-gradient(rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px, transparent 1px, transparent 3px),
+    #100e0b;
+  border-bottom:1px solid var(--itw-border);
 }
-.itw-mcard:hover .itw-mcard-blob{transform:scale(1.15);}
+.itw-mcard-demo::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 140% at 50% 30%, transparent 50%, rgba(0,0,0,.6) 100%);pointer-events:none;}
+.itw-mcard-demo-label{
+  position:absolute;top:8px;left:10px;z-index:3;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:5px;
+}
+.itw-mcard-demo-label::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--card-accent);animation:itw-hud-blink 1.4s ease-in-out infinite;}
+.itw-mcard:hover .itw-mcard-demo{background:
+    repeating-linear-gradient(rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 1px, transparent 1px, transparent 3px),
+    #14110d;}
+
+.itw-mcard-body{position:relative;z-index:1;padding:0 24px;display:flex;flex-direction:column;flex:1;}
 .itw-mcard-top{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-bottom:14px;}
 .itw-mcard-icon{
-  width:48px;height:48px;border-radius:15px;background:var(--card-accent-soft, var(--itw-accent-soft));
+  width:40px;height:40px;border-radius:11px;background:var(--card-accent-soft, var(--itw-accent-soft));
   color:var(--card-accent, var(--itw-accent));display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
-.itw-mcard-icon svg{width:26px;height:26px;}
-.itw-mcard .itw-tag{font-family:var(--font-body);font-weight:700;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--card-accent);}
-.itw-mcard h3{position:relative;z-index:1;font-family:var(--font-display);font-weight:800;font-size:26px;margin:0 0 8px;}
+.itw-mcard-icon svg{width:22px;height:22px;}
+.itw-mcard .itw-tag{font-family:var(--font-mono);font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--card-accent);}
+.itw-mcard h3{position:relative;z-index:1;font-family:var(--font-display);font-weight:800;font-size:24px;margin:0 0 8px;}
 .itw-mcard p{position:relative;z-index:1;font-size:14.5px;color:var(--itw-muted);margin:0 0 18px;line-height:1.55;flex:1;}
 .itw-mcard-bottom{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .itw-mcard p{position:relative;z-index:1;font-size:14.5px;color:var(--itw-muted);margin:0 0 18px;line-height:1.55;flex:1;}
@@ -171,6 +190,73 @@
 .itw-mcard[data-m="adhd"]{--card-accent:var(--itw-adhd);--card-accent-soft:var(--itw-adhd-soft);}
 .itw-mcard[data-m="dyslexia"]{--card-accent:var(--itw-dyslexia);--card-accent-soft:var(--itw-dyslexia-soft);}
 .itw-mcard[data-m="speech"]{--card-accent:var(--itw-speech);--card-accent-soft:var(--itw-speech-soft);}
+
+/* ---------- per-module demo scenes (looping micro-preview, no video file) ---------- */
+.itw-demo-dot{position:absolute;width:12px;height:12px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 5px rgba(229,72,77,.18),0 0 14px rgba(229,72,77,.5);}
+.itw-demo-decoy{position:absolute;width:12px;height:12px;border-radius:50%;background:#c95a4e;opacity:.55;}
+.itw-demo-tag{
+  position:absolute;font-family:var(--font-mono);font-size:9px;font-weight:700;color:#fff;letter-spacing:.03em;
+  white-space:nowrap;opacity:0;
+}
+
+/* autism: a real target among decoys, sound-labels flickering in */
+.itw-demo-autism .itw-demo-dot{top:44%;left:20%;animation:itw-target-pulse 1.4s ease-in-out infinite;}
+.itw-demo-autism .itw-demo-decoy:nth-child(2){top:20%;left:62%;}
+.itw-demo-autism .itw-demo-decoy:nth-child(3){top:65%;left:75%;}
+.itw-demo-autism .itw-demo-decoy:nth-child(4){top:70%;left:40%;}
+.itw-demo-autism .itw-demo-tag:nth-child(5){top:12%;left:38%;animation:itw-demo-blip 3.6s ease-in-out infinite;}
+.itw-demo-autism .itw-demo-tag:nth-child(6){top:55%;left:55%;animation:itw-demo-blip 3.6s ease-in-out 1.2s infinite;}
+.itw-demo-autism .itw-demo-tag:nth-child(7){top:78%;left:14%;animation:itw-demo-blip 3.6s ease-in-out 2.4s infinite;}
+@keyframes itw-demo-blip{0%,100%{opacity:0;transform:translateY(3px);}10%,30%{opacity:.85;transform:translateY(0);}40%{opacity:0;}}
+
+/* adhd: numbers waiting to be clicked in order, one distraction popping in */
+.itw-demo-num{
+  position:absolute;width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:11px;color:#fff;border:1.5px solid rgba(255,255,255,.25);
+}
+.itw-demo-adhd .itw-demo-num:nth-child(1){top:30%;left:16%;background:var(--itw-adhd);animation:itw-demo-done 4s ease-in-out infinite;}
+.itw-demo-adhd .itw-demo-num:nth-child(2){top:60%;left:36%;background:rgba(255,255,255,.08);animation:itw-demo-done 4s ease-in-out .5s infinite;}
+.itw-demo-adhd .itw-demo-num:nth-child(3){top:22%;left:58%;background:rgba(255,255,255,.08);animation:itw-demo-done 4s ease-in-out 1s infinite;}
+.itw-demo-adhd .itw-demo-num:nth-child(4){top:55%;left:78%;background:rgba(255,255,255,.08);animation:itw-demo-done 4s ease-in-out 1.5s infinite;}
+@keyframes itw-demo-done{0%,10%{background:rgba(255,255,255,.08);transform:scale(1);}18%,30%{background:var(--itw-adhd);transform:scale(1.15);}38%,100%{background:rgba(255,255,255,.08);transform:scale(1);}}
+.itw-demo-adhd .itw-demo-tag:nth-child(5){top:10%;left:30%;color:var(--itw-adhd);animation:itw-demo-blip 4s ease-in-out .2s infinite;}
+
+/* dyslexia: a letter flipping b/d, line swimming */
+.itw-demo-letter{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-display);
+  font-weight:800;font-size:46px;color:var(--itw-dyslexia);animation:itw-demo-flip 2.8s ease-in-out infinite;
+}
+@keyframes itw-demo-flip{0%,35%{transform:translate(-50%,-50%) scaleX(1);}50%,85%{transform:translate(-50%,-50%) scaleX(-1);}100%{transform:translate(-50%,-50%) scaleX(1);}}
+.itw-demo-line{position:absolute;left:14%;right:14%;height:2px;background:rgba(140,103,168,.35);border-radius:2px;}
+.itw-demo-dyslexia .itw-demo-line:nth-child(2){top:30%;animation:itw-demo-swim 3.4s ease-in-out infinite;}
+.itw-demo-dyslexia .itw-demo-line:nth-child(3){top:74%;animation:itw-demo-swim 3.4s ease-in-out .6s infinite;}
+@keyframes itw-demo-swim{0%,100%{transform:translateX(0) scaleX(1);}50%{transform:translateX(6px) scaleX(.92);}}
+
+/* speech: a word trying to land, glitching between attempts */
+.itw-demo-word{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-mono);
+  font-weight:700;font-size:15px;color:var(--itw-speech);letter-spacing:.02em;animation:itw-demo-stutter 3.2s ease-in-out infinite;
+}
+@keyframes itw-demo-stutter{
+  0%,8%{content:"";opacity:.3;}
+  0%,18%{opacity:.35;transform:translate(-50%,-50%) translateX(-2px);}
+  22%,30%{opacity:.35;transform:translate(-50%,-50%) translateX(2px);}
+  45%,60%{opacity:1;transform:translate(-50%,-50%) translateX(0);}
+  75%,100%{opacity:.35;}
+}
+.itw-demo-wave{position:absolute;bottom:16px;left:0;right:0;display:flex;align-items:flex-end;justify-content:center;gap:3px;height:22px;}
+.itw-demo-wave span{width:3px;background:var(--itw-speech);opacity:.5;border-radius:2px;animation:itw-demo-bar 1.4s ease-in-out infinite;}
+.itw-demo-wave span:nth-child(1){height:40%;animation-delay:0s;}
+.itw-demo-wave span:nth-child(2){height:90%;animation-delay:.15s;}
+.itw-demo-wave span:nth-child(3){height:60%;animation-delay:.3s;}
+.itw-demo-wave span:nth-child(4){height:100%;animation-delay:.45s;}
+.itw-demo-wave span:nth-child(5){height:50%;animation-delay:.6s;}
+@keyframes itw-demo-bar{0%,100%{transform:scaleY(.6);opacity:.4;}50%{transform:scaleY(1);opacity:.9;}}
+
+@media (prefers-reduced-motion: reduce){
+  .itw-mcard-demo *{animation:none !important;}
+  .itw-viewfinder-stage::before{animation:none !important;}
+}
 
 .itw-foot-note{margin-top:52px;padding-top:20px;border-top:1px solid var(--itw-border);font-size:12.5px;color:var(--itw-muted-dim);}
 
@@ -227,23 +313,63 @@
 .itw-readout{font-family:var(--font-mono);font-size:12.5px;color:var(--itw-muted);}
 
 /* ---------- viewfinder (signature element) ----------
-   A warm, rounded window into "what it might feel like" — soft glow
-   instead of a scope, a gentle label instead of a HUD readout. */
+   You are looking through an instrument, not a widget: a scope with
+   bracket corners, a scanline sweep, a vignette, and a HUD readout
+   that glows in the module's accent color. */
 .itw-viewfinder{position:relative;}
-.itw-viewfinder-stage{position:relative;min-height:500px;background:#1a1610;overflow:hidden;border-radius:22px;box-shadow:inset 0 0 60px rgba(0,0,0,.25);}
+.itw-viewfinder-stage{
+  position:relative;min-height:500px;overflow:hidden;border-radius:14px;
+  background:
+    repeating-linear-gradient(rgba(255,255,255,.025) 0px, rgba(255,255,255,.025) 1px, transparent 1px, transparent 3px),
+    radial-gradient(120% 130% at 50% 0%, rgba(255,255,255,.05), transparent 60%),
+    #100e0b;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 0 90px rgba(0,0,0,.6),
+    0 30px 60px -30px rgba(0,0,0,.55),
+    0 0 0 6px var(--itw-bg),
+    0 0 0 7px var(--itw-border);
+}
+.itw-viewfinder-stage::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:12;
+  background:radial-gradient(120% 100% at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%);
+}
+.itw-viewfinder-stage::before{
+  content:"";position:absolute;left:0;right:0;height:120px;z-index:11;pointer-events:none;
+  background:linear-gradient(rgba(255,255,255,.09), transparent);
+  animation:itw-scan 5.5s linear infinite;
+}
+@keyframes itw-scan{0%{top:-140px;}100%{top:100%;}}
 .itw-viewfinder-hud{
-  position:absolute;top:14px;left:14px;right:14px;z-index:10;display:flex;justify-content:space-between;
-  align-items:center;pointer-events:none;font-family:var(--font-body);font-weight:600;font-size:12px;letter-spacing:.01em;
+  position:absolute;top:16px;left:16px;right:16px;z-index:13;display:flex;justify-content:space-between;
+  align-items:center;pointer-events:none;font-family:var(--font-mono);font-weight:700;font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;
 }
 .itw-viewfinder-hud .itw-hud-rec{
-  display:flex;align-items:center;gap:7px;background:rgba(0,0,0,.32);color:var(--itw-text);
-  padding:6px 13px;border-radius:99px;backdrop-filter:blur(2px);
+  display:flex;align-items:center;gap:7px;background:rgba(0,0,0,.45);color:#f2ede0;
+  padding:6px 13px;border-radius:5px;border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(2px);
 }
-.itw-viewfinder-hud .itw-hud-dot{width:7px;height:7px;border-radius:50%;background:var(--itw-accent);}
-.itw-vf-corner{display:none;}
+.itw-viewfinder-hud .itw-hud-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--itw-accent);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--itw-accent) 35%, transparent);
+  animation:itw-hud-blink 1.4s ease-in-out infinite;
+}
+.itw-viewfinder-hud > span:last-child{
+  background:rgba(0,0,0,.45);color:var(--itw-accent);padding:6px 13px;border-radius:5px;
+  border:1px solid rgba(255,255,255,.14);
+}
+@keyframes itw-hud-blink{0%,100%{opacity:1;}50%{opacity:.35;}}
+.itw-vf-corner{
+  position:absolute;z-index:13;width:26px;height:26px;pointer-events:none;
+  border:2.5px solid color-mix(in srgb, var(--itw-accent) 70%, #fff 10%);opacity:.85;
+}
+.itw-vf-tl{top:12px;left:12px;border-right:none;border-bottom:none;border-radius:6px 0 0 0;}
+.itw-vf-tr{top:12px;right:12px;border-left:none;border-bottom:none;border-radius:0 6px 0 0;}
+.itw-vf-bl{bottom:12px;left:12px;border-right:none;border-top:none;border-radius:0 0 0 6px;}
+.itw-vf-br{bottom:12px;right:12px;border-left:none;border-top:none;border-radius:0 0 6px 0;}
 
 /* alias so existing markup keeps working */
-.itw-sim-stage{position:relative;min-height:500px;background:#1a1610;overflow:hidden;border-radius:22px;}
+.itw-sim-stage{position:relative;min-height:500px;overflow:hidden;border-radius:14px;}
 
 /* ---------- facts (paper index cards) ---------- */
 .itw-facts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
@@ -281,10 +407,25 @@
 .itw-decoy-target{position:absolute;z-index:5;text-align:center;cursor:pointer;}
 .itw-decoy-target .itw-dot{width:46px;height:46px;border-radius:50%;background:#c95a4e;margin:0 auto;box-shadow:0 0 0 10px rgba(201,90,78,.15), 0 0 30px rgba(201,90,78,.35);animation:itw-decoy-flicker 0.9s steps(3) infinite;}
 @keyframes itw-decoy-flicker{0%,100%{transform:scale(1);}33%{transform:scale(1.1);}66%{transform:scale(0.96);}}
-.itw-noise-item{position:absolute;font-family:var(--font-mono);font-size:19px;font-weight:700;color:#fff;white-space:nowrap;will-change:transform,opacity;}
+.itw-noise-item{position:absolute;font-family:var(--font-mono);font-size:15px;font-weight:700;color:rgba(255,255,255,.5);white-space:nowrap;will-change:transform,opacity;z-index:2;}
 .itw-flicker-overlay{position:absolute;inset:0;background:#fff;mix-blend-mode:overlay;pointer-events:none;}
-.itw-buzz-shape{position:absolute;border-radius:50%;filter:blur(1px);}
 @keyframes itw-floaty{0%,100%{transform:translate(0,0);}50%{transform:translate(6px,-6px);}}
+
+/* Named sound events — each one a real thing (a chair, a laugh, a bell),
+   not an abstract shape, arriving like a sound actually would: a quick
+   pop-in, a hold, a pop-out. */
+.itw-sound-burst{
+  position:absolute;z-index:6;display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:#fff;white-space:nowrap;
+  background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.16);border-radius:99px;
+  padding:5px 12px 5px 8px;backdrop-filter:blur(1px);transform-origin:center;will-change:transform,opacity;
+}
+.itw-sound-burst-icon{font-size:14px;line-height:1;}
+@keyframes itw-burst{
+  0%,100%{opacity:0;transform:scale(.7);}
+  8%,22%{opacity:1;transform:scale(1);}
+  30%{opacity:0;transform:scale(.85);}
+}
 .itw-round-pips{display:flex;gap:6px;}
 .itw-round-pips span{width:9px;height:9px;border-radius:50%;border:1px solid var(--itw-border);background:transparent;}
 .itw-round-pips span.itw-pip-done{background:var(--itw-accent);border-color:var(--itw-accent);}

@@ -239,6 +239,53 @@ const MODULE_ICONS = {
   ),
 };
 
+/* A silent, looping, DOM-built preview of each module's core moment —
+   answers "what does this look like" without a video file to host or load. */
+function ModuleDemoScene({ moduleKey }) {
+  if (moduleKey === "autism") {
+    return (
+      <>
+        <div className="itw-demo-dot" />
+        <div className="itw-demo-decoy" />
+        <div className="itw-demo-decoy" />
+        <div className="itw-demo-decoy" />
+        <span className="itw-demo-tag">chair scraping</span>
+        <span className="itw-demo-tag">someone's laughing</span>
+        <span className="itw-demo-tag">the fan is loud</span>
+      </>
+    );
+  }
+  if (moduleKey === "adhd") {
+    return (
+      <>
+        <div className="itw-demo-num">1</div>
+        <div className="itw-demo-num">2</div>
+        <div className="itw-demo-num">3</div>
+        <div className="itw-demo-num">4</div>
+        <span className="itw-demo-tag">don't forget your homework</span>
+      </>
+    );
+  }
+  if (moduleKey === "dyslexia") {
+    return (
+      <>
+        <div className="itw-demo-line" />
+        <div className="itw-demo-line" />
+        <div className="itw-demo-letter">b</div>
+      </>
+    );
+  }
+  // speech
+  return (
+    <>
+      <div className="itw-demo-word">the... the dog ran</div>
+      <div className="itw-demo-wave">
+        <span /><span /><span /><span /><span />
+      </div>
+    </>
+  );
+}
+
 function Landing({ onSelect }) {
   const { country } = useContext(SettingsContext);
   return (
@@ -265,21 +312,26 @@ function Landing({ onSelect }) {
       <div className="itw-bento itw-rise itw-rise-5">
         {MODULES.map((m, i) => (
           <button key={m.key} className={`itw-mcard itw-bento-${i}`} data-m={m.key} onClick={() => onSelect(m.key)}>
-            <div className="itw-mcard-blob" />
-            <div className="itw-mcard-top">
-              <div className="itw-mcard-icon">{MODULE_ICONS[m.key]}</div>
-              <div className="itw-tag">{m.tag}</div>
+            <div className={`itw-mcard-demo itw-demo-${m.key}`} aria-hidden="true">
+              <span className="itw-mcard-demo-label">Preview</span>
+              <ModuleDemoScene moduleKey={m.key} />
             </div>
-            <h3>{m.name}</h3>
-            <p>{m.blurb}</p>
-            <div className="itw-mcard-bottom">
-              <div className="itw-stat">
-                <b>{country === "in" ? m.statBigIN : m.statBig}</b>
-                <span>{country === "in" ? m.statRestIN : m.statRest}</span>
+            <div className="itw-mcard-body">
+              <div className="itw-mcard-top">
+                <div className="itw-mcard-icon">{MODULE_ICONS[m.key]}</div>
+                <div className="itw-tag">{m.tag}</div>
               </div>
-              <div className="itw-enter">
-                Try it
-                <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h11M10 5l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <h3>{m.name}</h3>
+              <p>{m.blurb}</p>
+              <div className="itw-mcard-bottom">
+                <div className="itw-stat">
+                  <b>{country === "in" ? m.statBigIN : m.statBig}</b>
+                  <span>{country === "in" ? m.statRestIN : m.statRest}</span>
+                </div>
+                <div className="itw-enter">
+                  Try it
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h11M10 5l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
               </div>
             </div>
           </button>
@@ -517,6 +569,24 @@ const NOISE_PHRASES = [
 ];
 const NOISE_COLORS = ["#4fb3a6", "#e8a23d", "#e37b6e", "#a48ce0", "#ffffff"];
 
+// Named sensory events with a real icon each — rendered instead of abstract
+// "static" blobs, so the overload reads as specific things actually
+// happening around a kid, not decoration.
+const SOUND_EVENTS = [
+  { label: "chair scraping", icon: "🪑" },
+  { label: "someone's laughing", icon: "😂" },
+  { label: "the fan is loud", icon: "🌀" },
+  { label: "phone buzzing", icon: "📳" },
+  { label: "door slamming", icon: "🚪" },
+  { label: "footsteps behind you", icon: "👣" },
+  { label: "papers rustling", icon: "📄" },
+  { label: "bell ringing", icon: "🔔" },
+  { label: "someone dropped a tray", icon: "🍽️" },
+  { label: "fluorescent flicker", icon: "💡" },
+  { label: "two kids arguing", icon: "🗣️" },
+  { label: "pencil tapping", icon: "✏️" },
+];
+
 const TOTAL_ROUNDS = 8;
 const ROUND_TIME_LIMIT = (round) => Math.max(1.1, 2.8 - round * 0.22);
 
@@ -558,17 +628,21 @@ function AutismSim() {
       })),
     []
   );
-  const buzzShapes = useMemo(
+  // Sound bursts: each one is a real, named sensory event (not an abstract
+  // blob) that pops in, holds, and pops out — like an actual sound arriving.
+  const soundBursts = useMemo(
     () =>
-      Array.from({ length: 30 }).map((_, i) => ({
-        id: i,
-        size: 24 + Math.random() * 110,
-        top: Math.random() * 92,
-        left: Math.random() * 92,
-        color: ["#4b8c74", "#dd9a3b", "#e07a54", "#8c67a8"][i % 4],
-        baseOpacity: 0.16 + Math.random() * 0.26,
-        duration: 2.2 + Math.random() * 3.6,
-      })),
+      Array.from({ length: 16 }).map((_, i) => {
+        const ev = SOUND_EVENTS[i % SOUND_EVENTS.length];
+        return {
+          id: i,
+          ...ev,
+          top: 4 + Math.random() * 84,
+          left: 4 + Math.random() * 76,
+          delay: Math.random() * 4,
+          duration: 2.6 + Math.random() * 2.2,
+        };
+      }),
     []
   );
 
@@ -784,21 +858,22 @@ function AutismSim() {
             {n.text}
           </div>
         ))}
-        {buzzShapes.map((b) => (
-          <div
-            key={b.id}
-            className="itw-buzz-shape"
-            style={{
-              top: `${b.top}%`,
-              left: `${b.left}%`,
-              width: b.size,
-              height: b.size,
-              background: b.color,
-              opacity: (b.baseOpacity * intensity).toFixed(2),
-              animation: `itw-floaty ${b.duration}s ease-in-out infinite`,
-            }}
-          />
-        ))}
+        {intensity > 0.08 &&
+          soundBursts.map((b) => (
+            <div
+              key={b.id}
+              className="itw-sound-burst"
+              style={{
+                top: `${b.top}%`,
+                left: `${b.left}%`,
+                animation: `itw-burst ${b.duration}s ease-in-out ${b.delay}s infinite`,
+                opacity: Math.min(1, intensity + 0.15),
+              }}
+            >
+              <span className="itw-sound-burst-icon">{b.icon}</span>
+              {b.label}
+            </div>
+          ))}
         <div className="itw-flicker-overlay" style={{ opacity: (intensity * 0.15).toFixed(2) }} />
       </Viewfinder>
       <div className="itw-sim-controls">
