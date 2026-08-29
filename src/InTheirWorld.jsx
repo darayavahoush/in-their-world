@@ -597,6 +597,8 @@ function FactsConveyor({ facts, onComplete }) {
     completedRef.current = true; // manual browsing shouldn't re-trigger the auto-scroll
     setIdx(i);
   };
+  const prev = () => jump((idx - 1 + facts.length) % facts.length);
+  const next = () => jump((idx + 1) % facts.length);
 
   const f = facts[idx];
 
@@ -606,6 +608,14 @@ function FactsConveyor({ facts, onComplete }) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
+      <button
+        type="button"
+        className="itw-conveyor-arrow itw-conveyor-arrow-prev"
+        aria-label="Previous fact"
+        onClick={prev}
+      >
+        <svg viewBox="0 0 20 20" fill="none"><path d="M12 4 6 10l6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
       <div className="itw-conveyor-track">
         <div
           key={idx}
@@ -617,6 +627,14 @@ function FactsConveyor({ facts, onComplete }) {
           <div className="itw-conveyor-src">{f.src}</div>
         </div>
       </div>
+      <button
+        type="button"
+        className="itw-conveyor-arrow itw-conveyor-arrow-next"
+        aria-label="Next fact"
+        onClick={next}
+      >
+        <svg viewBox="0 0 20 20" fill="none"><path d="M8 4l6 6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
       <div className="itw-conveyor-dots">
         {facts.map((_, i) => (
           <button
