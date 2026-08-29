@@ -24,6 +24,14 @@ import "./InTheirWorld.css";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* Smoothly scroll a section into view by id — used by the module TOC and by
+   the facts conveyor once it's cycled through everything. */
+function scrollToId(id) {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 const ACCENT_HEX = {
   landing: "79,179,166",
   autism: "79,179,166",
@@ -32,9 +40,9 @@ const ACCENT_HEX = {
   speech: "227,123,110",
 };
 
-/* ---------------- Settings context (sound + stats region) ---------------- */
+/* ---------------- Settings context (sound) ---------------- */
 
-const SettingsContext = createContext({ soundOn: true, country: "us" });
+const SettingsContext = createContext({ soundOn: true });
 
 /* ---------------- Audio engine (Web Audio API, no external assets) ---------------- */
 
@@ -243,40 +251,32 @@ const MODULES = [
     tag: "Sensory input",
     name: "Autism",
     blurb: "Sensory processing, filtering, and why a “normal” room can feel like too much.",
-    statBig: "1 in 31",
-    statRest: "8-year-olds in the US (CDC, 2022 data)",
-    statBigIN: "~1 in 100",
-    statRestIN: "children under 10 in India (INCLEN Trust, PLOS Medicine)",
+    statBig: "~1 in 100",
+    statRest: "children under 10 in India (INCLEN Trust, PLOS Medicine)",
   },
   {
     key: "adhd",
     tag: "Sustained focus",
     name: "ADHD",
     blurb: "What it takes to hold attention on one task while everything else pulls at you.",
-    statBig: "11.4%",
-    statRest: "of US children, ever diagnosed (CDC, 2022)",
-    statBigIN: "~7.1%",
-    statRestIN: "pooled prevalence, Indian children & adolescents (19-study meta-analysis)",
+    statBig: "~7.1%",
+    statRest: "pooled prevalence, Indian children & adolescents (19-study meta-analysis)",
   },
   {
     key: "dyslexia",
     tag: "Reading & decoding",
     name: "Dyslexia",
     blurb: "Decoding text when letters won't sit still and reading takes real effort, every line.",
-    statBig: "15–20%",
-    statRest: "show signs of dyslexia (Intl. Dyslexia Assoc.)",
-    statBigIN: "10–15%",
-    statRestIN: "of Indian children, estimated dyslexic (Dyslexia Association of India)",
+    statBig: "10–15%",
+    statRest: "of Indian children, estimated dyslexic (Dyslexia Association of India)",
   },
   {
     key: "speech",
     tag: "Finding the words",
     name: "Speech & Language",
     blurb: "Knowing exactly what you want to say — and having the words arrive late, or not at all.",
-    statBig: "1 in 12",
-    statRest: "kids, voice/speech/language disorder (NIDCD)",
-    statBigIN: "~1 in 11",
-    statRestIN: "at-risk children found to have one on evaluation (Indian rural screening study)",
+    statBig: "~1 in 11",
+    statRest: "at-risk children found to have one on evaluation (Indian rural screening study)",
   },
 ];
 
@@ -306,8 +306,25 @@ const MODULE_ICONS = {
   ),
 };
 
+/* A tiny fake mouse pointer that drifts to a target and "clicks" it, on a
+   loop — this is what stands in for the idle/resting state of each sim,
+   so the resting card demonstrates how the task is actually played
+   instead of just showing a frozen scene. */
+function DemoCursor({ variant }) {
+  return (
+    <span className={`itw-cp-cursor itw-cp-cursor-${variant}`} aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 3l14 6.2-5.6 2.1L10 17 4 3Z" fill="#fff" stroke="#2a2a28" strokeWidth="1.4" strokeLinejoin="round" />
+      </svg>
+      <span className="itw-cp-click-ring" />
+    </span>
+  );
+}
+
 /* A tiny, auto-playing, DOM-built preview of each module's core moment —
-   answers "what does this look like" without a video file to host or load. */
+   answers "what does this look like" without a video file to host or load.
+   Doubles as the idle demo: a cursor visibly moves in and clicks the thing
+   you'd click, on loop, so the resting state teaches the mechanic. */
 function CardPreview({ moduleKey }) {
   if (moduleKey === "autism") {
     return (
@@ -316,6 +333,7 @@ function CardPreview({ moduleKey }) {
         <span className="itw-cp-dot itw-cp-decoy" style={{ top: "62%", left: "58%" }} />
         <span className="itw-cp-dot itw-cp-decoy" style={{ top: "70%", left: "18%", animationDelay: ".35s" }} />
         <span className="itw-cp-chip">🪑 chair scraping</span>
+        <DemoCursor variant="autism" />
       </div>
     );
   }
@@ -325,6 +343,7 @@ function CardPreview({ moduleKey }) {
         <span className="itw-cp-num">4</span>
         <span className="itw-cp-num itw-cp-num-2">7</span>
         <span className="itw-cp-bubble">New message!</span>
+        <DemoCursor variant="adhd" />
       </div>
     );
   }
@@ -338,6 +357,7 @@ function CardPreview({ moduleKey }) {
             </span>
           ))}
         </span>
+        <DemoCursor variant="dyslexia" />
       </div>
     );
   }
@@ -347,12 +367,12 @@ function CardPreview({ moduleKey }) {
       <span className="itw-cp-word">
         I w<span className="itw-cp-blocked">-w-w</span>ant to...
       </span>
+      <DemoCursor variant="speech" />
     </div>
   );
 }
 
 function Landing({ onSelect }) {
-  const { country } = useContext(SettingsContext);
   return (
     <section className="itw-view">
       <div className="itw-blob itw-blob-1" />
@@ -374,7 +394,15 @@ function Landing({ onSelect }) {
         </div>
       </div>
 
-      <div className="itw-grid-eyebrow itw-rise itw-rise-5">Four experiences</div>
+      <div className="itw-roadmap itw-rise itw-rise-5" aria-hidden="true">
+        <div className="itw-roadmap-path" />
+        {MODULES.map((m, i) => (
+          <div className="itw-roadmap-stop" key={m.key} style={{ "--stop-accent": `var(--itw-${m.key})` }}>
+            <span className="itw-roadmap-num">{String(i + 1).padStart(2, "0")}</span>
+            <span className="itw-roadmap-label">{m.name}</span>
+          </div>
+        ))}
+      </div>
       <div className="itw-bento itw-rise itw-rise-5">
         {MODULES.map((m, i) => (
           <button key={m.key} className={`itw-mcard itw-bento-${i}`} data-m={m.key} onClick={() => onSelect(m.key)}>
@@ -386,15 +414,15 @@ function Landing({ onSelect }) {
               <h3>{m.name}</h3>
               <p>{m.blurb}</p>
               <div className="itw-cp-label">
-                Preview <span className="itw-cp-live" />
+                How it plays <span className="itw-cp-live" />
               </div>
               <div className="itw-card-preview">
                 <CardPreview moduleKey={m.key} />
               </div>
               <div className="itw-mcard-bottom">
                 <div className="itw-stat">
-                  <b>{country === "in" ? m.statBigIN : m.statBig}</b>
-                  <span>{country === "in" ? m.statRestIN : m.statRest}</span>
+                  <b>{m.statBig}</b>
+                  <span>{m.statRest}</span>
                 </div>
                 <div className="itw-enter">
                   Try it
@@ -409,8 +437,8 @@ function Landing({ onSelect }) {
       <AboutBlock />
 
       <div className="itw-foot-note">
-        Built to build empathy, not to diagnose. Figures are approximate and drawn from CDC, NIDCD,
-        ASHA, the International Dyslexia Association, and peer-reviewed Indian epidemiological studies.
+        Built to build empathy, not to diagnose. Figures are approximate and drawn from the Dyslexia
+        Association of India, AIISH, INCLEN Trust / PLOS Medicine, and peer-reviewed Indian epidemiological studies.
       </div>
     </section>
   );
@@ -429,6 +457,7 @@ function AboutBlock() {
           going through. This is a five-minute way in — try the task, feel the friction, then
           walk away with a couple of things you can actually do differently at home or school.
         </p>
+        <p className="itw-brand-echo">EveryChildLearnsDifferently.</p>
         <p>
           Made by <a href="https://www.manaslearning.com" target="_blank" rel="noreferrer">Manas Learning</a>,
           for the parents and teachers who want a starting point, not a stereotype.
@@ -440,7 +469,7 @@ function AboutBlock() {
 
 /* ---------------- Shared module shell ---------------- */
 
-function SettingsBar({ soundOn, setSoundOn, country, setCountry }) {
+function SettingsBar({ soundOn, setSoundOn }) {
   return (
     <div className="itw-settings-bar">
       <button
@@ -451,26 +480,6 @@ function SettingsBar({ soundOn, setSoundOn, country, setCountry }) {
       >
         {soundOn ? "🔊 Sound on" : "🔇 Sound off"}
       </button>
-      <div className="itw-country-toggle" role="tablist" aria-label="Statistics region">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={country === "us"}
-          className={country === "us" ? "itw-active" : ""}
-          onClick={() => setCountry("us")}
-        >
-          🌍 US / Global
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={country === "in"}
-          className={country === "in" ? "itw-active" : ""}
-          onClick={() => setCountry("in")}
-        >
-          🇮🇳 India
-        </button>
-      </div>
     </div>
   );
 }
@@ -502,22 +511,94 @@ function StrategyTabs({ home, classroom }) {
   );
 }
 
-function FactsGrid({ factsUS, factsIN, note, noteIN }) {
-  const { country } = useContext(SettingsContext);
-  const facts = country === "in" && factsIN ? factsIN : factsUS;
-  const shownNote = country === "in" && noteIN ? noteIN : note;
+/* A conveyor belt of facts: one at a time, popping in big and bright, then
+   sliding off to make way for the next. Cycles through the whole set once
+   and fires onComplete — used to auto-scroll down to "how you can help". */
+function FactsConveyor({ facts, onComplete }) {
+  const { soundOn } = useContext(SettingsContext);
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const completedRef = useRef(false);
+
+  // Reset only when the actual fact set changes (e.g. US/India toggle) —
+  // not on every unrelated re-render, since the facts array is a fresh
+  // literal each time the parent renders.
+  const factsKey = facts.map((f) => f.num).join("|");
+  useEffect(() => {
+    completedRef.current = false;
+    setIdx(0);
+  }, [factsKey]);
+
+  // Read each fact aloud as it comes up on the belt, if sound is on.
+  useEffect(() => {
+    if (!soundOn) return;
+    const f = facts[idx];
+    if (!f) return;
+    if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+    speakText(`${f.num}. ${f.label}`, { rate: 1.02, volume: 0.55 });
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, soundOn, factsKey]);
+
+  const handleEnd = () => {
+    if (paused) return;
+    if (idx === facts.length - 1) {
+      if (!completedRef.current) {
+        completedRef.current = true;
+        onComplete && onComplete();
+      }
+      setIdx(0);
+    } else {
+      setIdx((i) => i + 1);
+    }
+  };
+
+  const jump = (i) => {
+    completedRef.current = true; // manual browsing shouldn't re-trigger the auto-scroll
+    setIdx(i);
+  };
+
+  const f = facts[idx];
+
   return (
-    <>
-      <div className="itw-facts-grid">
-        {facts.map((f, i) => (
-          <div className="itw-fact-card" key={i}>
-            <div className="itw-num">{f.num}</div>
-            <div className="itw-lbl">{f.label}</div>
-            <div className="itw-src">{f.src}</div>
-          </div>
+    <div
+      className="itw-conveyor"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="itw-conveyor-track">
+        <div
+          key={idx}
+          className={`itw-conveyor-card${paused ? " itw-conveyor-paused" : ""}`}
+          onAnimationEnd={handleEnd}
+        >
+          <div className="itw-conveyor-num">{f.num}</div>
+          <div className="itw-conveyor-lbl">{f.label}</div>
+          <div className="itw-conveyor-src">{f.src}</div>
+        </div>
+      </div>
+      <div className="itw-conveyor-dots">
+        {facts.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Show fact ${i + 1} of ${facts.length}`}
+            className={i === idx ? "itw-active" : ""}
+            onClick={() => jump(i)}
+          />
         ))}
       </div>
-      {shownNote && <p className="itw-fact-note">{shownNote}</p>}
+    </div>
+  );
+}
+
+function FactsGrid({ facts, note, onComplete }) {
+  return (
+    <>
+      <FactsConveyor facts={facts} onComplete={onComplete} />
+      {note && <p className="itw-fact-note">{note}</p>}
     </>
   );
 }
@@ -540,7 +621,24 @@ function ModuleSwitcher({ current, onNavigate }) {
   );
 }
 
-function ModuleShell({ accent, eyebrow, title, dek, onBack, onNavigate, children }) {
+function ModuleTOC({ sections }) {
+  if (!sections || !sections.length) return null;
+  return (
+    <nav className="itw-toc" aria-label="Jump to a section">
+      <span className="itw-toc-label">Jump to</span>
+      <div className="itw-toc-items">
+        {sections.map((s, i) => (
+          <button key={s.id} type="button" className="itw-toc-item" onClick={() => scrollToId(s.id)}>
+            <span className="itw-toc-num">{i + 1}</span>
+            {s.label}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function ModuleShell({ accent, eyebrow, title, dek, sections, onBack, onNavigate, children }) {
   return (
     <section className="itw-view itw-module" data-accent={accent}>
       <div className="itw-module-top">
@@ -553,6 +651,15 @@ function ModuleShell({ accent, eyebrow, title, dek, onBack, onNavigate, children
         <div className="itw-eyebrow">{eyebrow}</div>
         <h2 className="itw-mtitle">{title}</h2>
         <p className="itw-module-dek">{dek}</p>
+      </div>
+      <ModuleTOC sections={sections} />
+      <div className="itw-mpreview" aria-hidden="true">
+        <div className="itw-cp-label">
+          How it plays — watch, then try it yourself <span className="itw-cp-live" />
+        </div>
+        <div className="itw-card-preview itw-card-preview-lg">
+          <CardPreview moduleKey={accent} />
+        </div>
       </div>
       {children}
     </section>
@@ -977,32 +1084,40 @@ function AutismModule({ onBack, onNavigate }) {
       eyebrow="Autism"
       title="The room doesn't turn down."
       dek="For many autistic kids, sensory input doesn't fade into the background automatically — the hum of lights, a chair scraping, three conversations at once can all arrive at full volume, all at the same time."
+      sections={[
+        { id: "autism-try", label: "Try it" },
+        { id: "autism-data", label: "The data" },
+        { id: "autism-help", label: "How to help" },
+      ]}
       onBack={onBack}
       onNavigate={onNavigate}
     >
-      <section className="itw-block">
+      <section className="itw-block" id="autism-try">
         <div className="itw-block-label">Try it — Observation Task</div>
         <AutismSim />
       </section>
-      <section className="itw-block">
+      <section className="itw-block" id="autism-data">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          factsUS={[
-            { num: "1 in 31", label: "8-year-olds in the US identified with autism spectrum disorder", src: "CDC ADDM Network, 2022 data (released 2025)" },
-            { num: "~90%", label: "of autistic people report sensory sensitivities — sound, light, texture, or touch", src: "Commonly cited across sensory-processing research" },
-            { num: "4:1", label: "boys diagnosed for every girl — though many researchers believe girls are underdiagnosed, not less affected", src: "CDC ADDM Network" },
-          ]}
-          factsIN={[
+          facts={[
             { num: "~1 in 100", label: "children under age 10 in India may have autism, per a large community-based sample", src: "INCLEN Trust study, PLOS Medicine" },
             { num: "0.4–1.8%", label: "regional spread found across India, from urban North Goa to rural Palwal, Haryana", src: "INCLEN Trust study, PLOS Medicine" },
             { num: "1 in 8", label: "children in the same sample had at least one neurodevelopmental condition of any kind", src: "INCLEN Trust study, PLOS Medicine" },
           ]}
-          note="Sensory overload isn't a behavior problem — it's a nervous system taking in more raw input than it can sort through in real time. What looks like “not listening” or “melting down” is often a filtering system working overtime."
-          noteIN="India's 2011 census recorded autism at a fraction of this rate — researchers call that a large undercount, driven by limited screening access and stigma that keeps families from seeking evaluation, not by a genuinely lower rate of autism."
+          note="Sensory overload isn't a behavior problem — it's a nervous system taking in more raw input than it can sort through in real time. India's 2011 census recorded autism at a fraction of this rate — researchers call that a large undercount, driven by limited screening access and stigma, not a genuinely lower rate of autism."
+          onComplete={() => scrollToId("autism-help")}
         />
       </section>
-      <section className="itw-block">
-        <div className="itw-block-label">What this means for you</div>
+      <section className="itw-block itw-help-block" id="autism-help">
+        <div className="itw-help-head">
+          <div className="itw-help-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4a5 5 0 0 1 6.4 2 5 5 0 0 1 6.4-2C22 4.5 23.6 8 22 11.7 19.5 16.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+          </div>
+          <div>
+            <div className="itw-help-eyebrow">What actually helps</div>
+            <h3 className="itw-help-title">How you can help</h3>
+          </div>
+        </div>
         <StrategyTabs
           home={[
             "Build in a low-stimulation space the child can retreat to before overload turns into a meltdown, not after.",
@@ -1330,32 +1445,40 @@ function AdhdModule({ onBack, onNavigate }) {
       eyebrow="ADHD"
       title="Attention isn't a switch."
       dek="It's not that kids with ADHD can't focus — it's that their attention responds to whatever is most stimulating in the moment, and staying locked onto one quiet task takes active, exhausting effort."
+      sections={[
+        { id: "adhd-try", label: "Try it" },
+        { id: "adhd-data", label: "The data" },
+        { id: "adhd-help", label: "How to help" },
+      ]}
       onBack={onBack}
       onNavigate={onNavigate}
     >
-      <section className="itw-block">
+      <section className="itw-block" id="adhd-try">
         <div className="itw-block-label">Try it — Focus Task</div>
         <AdhdSim />
       </section>
-      <section className="itw-block">
+      <section className="itw-block" id="adhd-data">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          factsUS={[
-            { num: "11.4%", label: "of US children aged 3–17 have ever been diagnosed with ADHD — about 1 in 9", src: "CDC / 2022 National Survey of Children's Health" },
-            { num: "~78%", label: "of kids with ADHD have at least one co-occurring condition, most often anxiety", src: "CDC, 2022" },
-            { num: "3–4", label: "students in a class of 30 are statistically likely to have an ADHD diagnosis", src: "Extrapolated from CDC prevalence data" },
-          ]}
-          factsIN={[
+          facts={[
             { num: "~7.1%", label: "pooled prevalence of ADHD among Indian children & adolescents, across 19 studies", src: "Indian systematic review & meta-analysis" },
             { num: "9.4% vs 5.2%", label: "prevalence among boys versus girls in the same pooled Indian data", src: "Indian systematic review & meta-analysis" },
             { num: "2–3", label: "students in a class of 30 are statistically likely to have ADHD, by the pooled Indian estimate", src: "Extrapolated from meta-analysis data" },
           ]}
-          note="ADHD is a difference in how the brain regulates attention and impulse — not a lack of willpower. A distraction-heavy environment doesn't cause ADHD, but it makes the same task measurably harder to finish."
-          noteIN="Individual Indian studies range widely — from about 2% in some community samples up to nearly 29% in others — reflecting differences in screening tools, region, and setting rather than a single settled national rate."
+          note="ADHD is a difference in how the brain regulates attention and impulse — not a lack of willpower. Individual Indian studies range widely, from about 2% in some community samples up to nearly 29% in others, reflecting differences in screening tools, region, and setting rather than a single settled national rate."
+          onComplete={() => scrollToId("adhd-help")}
         />
       </section>
-      <section className="itw-block">
-        <div className="itw-block-label">What this means for you</div>
+      <section className="itw-block itw-help-block" id="adhd-help">
+        <div className="itw-help-head">
+          <div className="itw-help-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4a5 5 0 0 1 6.4 2 5 5 0 0 1 6.4-2C22 4.5 23.6 8 22 11.7 19.5 16.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+          </div>
+          <div>
+            <div className="itw-help-eyebrow">What actually helps</div>
+            <h3 className="itw-help-title">How you can help</h3>
+          </div>
+        </div>
         <StrategyTabs
           home={[
             "Break tasks into small, visible steps instead of one open-ended instruction like “clean your room.”",
@@ -1600,32 +1723,40 @@ function DyslexiaModule({ onBack, onNavigate }) {
       eyebrow="Dyslexia"
       title="Smart, and still stuck on the sentence."
       dek="Dyslexia isn't about seeing letters backwards — it's a difference in how the brain connects written symbols to sounds. Comprehension is usually fine. Decoding the words to get there is the hard part."
+      sections={[
+        { id: "dyslexia-try", label: "Try it" },
+        { id: "dyslexia-data", label: "The data" },
+        { id: "dyslexia-help", label: "How to help" },
+      ]}
       onBack={onBack}
       onNavigate={onNavigate}
     >
-      <section className="itw-block">
+      <section className="itw-block" id="dyslexia-try">
         <div className="itw-block-label">Try it — Reading Challenge</div>
         <DyslexiaSim />
       </section>
-      <section className="itw-block">
+      <section className="itw-block" id="dyslexia-data">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          factsUS={[
-            { num: "15–20%", label: "of the population shows some signs of dyslexia", src: "International Dyslexia Association" },
-            { num: "~80%", label: "of all diagnosed learning disabilities are dyslexia — it's the most common one by far", src: "Intl. Dyslexia Association" },
-            { num: "40–60%", label: "chance a child has dyslexia if a parent does — it runs strongly in families", src: "Yale Center for Dyslexia & Creativity" },
-          ]}
-          factsIN={[
+          facts={[
             { num: "10–15%", label: "of Indian children are estimated to be dyslexic", src: "Dyslexia Association of India" },
             { num: "6.2%", label: "pooled prevalence of dyslexia specifically, from a meta-analysis of Indian studies", src: "Indian systematic review & meta-analysis, 2022" },
             { num: "~80%", label: "of specific learning disorders diagnosed in India are dyslexia, same as the global pattern", src: "Indian systematic review, 2023" },
           ]}
-          note="A dyslexic child who reads slowly and understands nothing on a timed test may understand everything when given more time or the text read aloud. Speed of decoding and strength of comprehension are two different skills."
-          noteIN="India's pooled estimate for all learning disabilities combined (reading, writing, and math difficulties together) runs around 10.7% of school-age children — individual Indian studies range from about 2% to over 30% depending on region and screening method."
+          note="A dyslexic child who reads slowly and understands nothing on a timed test may understand everything when given more time or the text read aloud. India's pooled estimate for all learning disabilities combined runs around 10.7% of school-age children — individual studies range from about 2% to over 30% depending on region and screening method."
+          onComplete={() => scrollToId("dyslexia-help")}
         />
       </section>
-      <section className="itw-block">
-        <div className="itw-block-label">What this means for you</div>
+      <section className="itw-block itw-help-block" id="dyslexia-help">
+        <div className="itw-help-head">
+          <div className="itw-help-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4a5 5 0 0 1 6.4 2 5 5 0 0 1 6.4-2C22 4.5 23.6 8 22 11.7 19.5 16.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+          </div>
+          <div>
+            <div className="itw-help-eyebrow">What actually helps</div>
+            <h3 className="itw-help-title">How you can help</h3>
+          </div>
+        </div>
         <StrategyTabs
           home={[
             "Read aloud together well past the age other kids stop needing it — it protects a love of stories while decoding catches up.",
@@ -2012,32 +2143,40 @@ function SpeechModule({ onBack, onNavigate }) {
       eyebrow="Speech & Language"
       title="The word is there. It's just not arriving yet."
       dek="For kids with speech sound disorders, stuttering, or word-finding difficulties, the thought is usually fully formed — the gap is between knowing what to say and getting it out cleanly."
+      sections={[
+        { id: "speech-try", label: "Try it" },
+        { id: "speech-data", label: "The data" },
+        { id: "speech-help", label: "How to help" },
+      ]}
       onBack={onBack}
       onNavigate={onNavigate}
     >
-      <section className="itw-block">
+      <section className="itw-block" id="speech-try">
         <div className="itw-block-label">Try it — Find the Words</div>
         <SpeechSim />
       </section>
-      <section className="itw-block">
+      <section className="itw-block" id="speech-data">
         <div className="itw-block-label">The data</div>
         <FactsGrid
-          factsUS={[
-            { num: "~1 in 12", label: "US children ages 3–17 have had a voice, speech, or language disorder", src: "NIDCD / NIH" },
-            { num: "7%", label: "of children have a developmental language disorder — about 1 in 14", src: "NIDCD" },
-            { num: "10.8%", label: "prevalence among kids aged 3–6, the highest of any age band — many outgrow it with support", src: "NIDCD" },
-          ]}
-          factsIN={[
+          facts={[
             { num: "~1 in 11", label: "at-risk children were confirmed to have a speech or language disorder on full evaluation", src: "Indian rural communication-disorder screening study" },
             { num: "1.5%", label: "of children aged 4–16 showed stuttering in a Bangalore-area epidemiological study", src: "Srinath et al., Bangalore child & adolescent psychiatric disorder study" },
             { num: "10%", label: "of people with a communication disorder in India stutter, per a leading speech & hearing institute", src: "All India Institute of Speech and Hearing (AIISH)" },
           ]}
-          note="A blocked word or a mispronounced sound is not a sign of not knowing the answer. Rushing a child to “just spit it out” almost always makes the block worse, not better."
-          noteIN="India is linguistically dense — many children grow up multilingual, which researchers note can complicate early screening for a genuine speech or language disorder versus normal multilingual development."
+          note="A blocked word or a mispronounced sound is not a sign of not knowing the answer. India is linguistically dense — many children grow up multilingual, which researchers note can complicate early screening for a genuine speech or language disorder versus normal multilingual development."
+          onComplete={() => scrollToId("speech-help")}
         />
       </section>
-      <section className="itw-block">
-        <div className="itw-block-label">What this means for you</div>
+      <section className="itw-block itw-help-block" id="speech-help">
+        <div className="itw-help-head">
+          <div className="itw-help-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4a5 5 0 0 1 6.4 2 5 5 0 0 1 6.4-2C22 4.5 23.6 8 22 11.7 19.5 16.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+          </div>
+          <div>
+            <div className="itw-help-eyebrow">What actually helps</div>
+            <h3 className="itw-help-title">How you can help</h3>
+          </div>
+        </div>
         <StrategyTabs
           home={[
             "Let the child finish their own sentence — resist filling in the word for them, even when you're sure what it is.",
@@ -2062,13 +2201,24 @@ function SpeechModule({ onBack, onNavigate }) {
 export default function InTheirWorld() {
   const [view, setView] = useState("landing");
   const [soundOn, setSoundOn] = useState(true);
-  const [country, setCountry] = useState("us");
+
+  useEffect(() => {
+    const prev = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "smooth";
+    return () => {
+      document.documentElement.style.scrollBehavior = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [view]);
 
   const goBack = () => setView("landing");
   const navigate = (key) => setView(key);
 
   const glow = `rgba(${ACCENT_HEX[view] || ACCENT_HEX.landing}, .16)`;
-  const settings = useMemo(() => ({ soundOn, country }), [soundOn, country]);
+  const settings = useMemo(() => ({ soundOn }), [soundOn]);
 
   return (
     <SettingsContext.Provider value={settings}>
@@ -2076,12 +2226,7 @@ export default function InTheirWorld() {
         <div className="itw-grain" aria-hidden="true" />
         <div className="itw-ambient" style={{ "--itw-glow": glow }} aria-hidden="true" />
         <div className="itw-app">
-          <SettingsBar
-            soundOn={soundOn}
-            setSoundOn={setSoundOn}
-            country={country}
-            setCountry={setCountry}
-          />
+          <SettingsBar soundOn={soundOn} setSoundOn={setSoundOn} />
           {view === "landing" && <Landing onSelect={setView} />}
           {view === "autism" && <AutismModule key="autism" onBack={goBack} onNavigate={navigate} />}
           {view === "adhd" && <AdhdModule key="adhd" onBack={goBack} onNavigate={navigate} />}
