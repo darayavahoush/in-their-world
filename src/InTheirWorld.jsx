@@ -33,11 +33,18 @@ function scrollToId(id) {
 }
 
 const ACCENT_HEX = {
-  landing: "79,179,166",
-  autism: "79,179,166",
-  adhd: "232,162,61",
-  dyslexia: "164,140,224",
-  speech: "227,123,110",
+  landing: "44,140,114",
+  autism: "44,140,114",
+  adhd: "140,101,32",
+  dyslexia: "89,40,140",
+  speech: "140,66,44",
+};
+const ACCENT_HEX_DARK = {
+  landing: "86,210,177",
+  autism: "86,210,177",
+  adhd: "210,160,86",
+  dyslexia: "144,86,210",
+  speech: "210,115,86",
 };
 
 /* ---------------- Settings context (sound) ---------------- */
@@ -451,12 +458,35 @@ function AboutBlock() {
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7.5-4.6-10-9.3C.4 8 2 4.5 5.6 4a5 5 0 0 1 6.4 2 5 5 0 0 1 6.4-2C22 4.5 23.6 8 22 11.7 19.5 16.4 12 21 12 21Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
       </div>
       <div>
-        <h3>Why this exists</h3>
+        <h3>About In Their World</h3>
         <p>
-          Most parents don't get much time before they need to understand what their child is
-          going through. This is a five-minute way in — try the task, feel the friction, then
-          walk away with a couple of things you can actually do differently at home or school.
+          Reading a checklist about autism, ADHD, dyslexia, or a speech/language difference tells you
+          the facts — it doesn't tell you what your child's morning actually feels like. In Their World
+          is four short simulations, one per condition, that put you inside that experience for a few
+          minutes: sounds you can't tune out, focus that keeps slipping, letters that won't sit still,
+          words that won't come out in time. Most parents and teachers don't get long before they need
+          to understand — this is a five-minute way in.
         </p>
+        <p>
+          The data behind each module is deliberately Indian, not imported. Most awareness material
+          in this space is built on US or UK prevalence numbers that don't map cleanly onto a country
+          where diagnosis is far less common and often comes late. Figures here are drawn from the
+          Dyslexia Association of India, AIISH, and INCLEN Trust / PLOS Medicine studies instead.
+        </p>
+        <ul className="itw-about-points">
+          <li>
+            <b>Feel it first</b>
+            A short interactive task simulates the actual friction — not a description of it.
+          </li>
+          <li>
+            <b>See the numbers</b>
+            Indian prevalence data and context, so the scale feels real rather than abstract.
+          </li>
+          <li>
+            <b>Know what helps</b>
+            Concrete, low-effort strategies for home and classroom, not just awareness.
+          </li>
+        </ul>
         <p className="itw-brand-echo">EveryChildLearnsDifferently.</p>
         <p>
           Made by <a href="https://www.manaslearning.com" target="_blank" rel="noreferrer">Manas Learning</a>,
@@ -469,9 +499,17 @@ function AboutBlock() {
 
 /* ---------------- Shared module shell ---------------- */
 
-function SettingsBar({ soundOn, setSoundOn }) {
+function SettingsBar({ soundOn, setSoundOn, darkMode, setDarkMode }) {
   return (
     <div className="itw-settings-bar">
+      <button
+        type="button"
+        className={`itw-toggle-btn${darkMode ? " itw-active" : ""}`}
+        aria-pressed={darkMode}
+        onClick={() => setDarkMode((v) => !v)}
+      >
+        {darkMode ? "☀️ Light mode" : "🌙 Dark mode"}
+      </button>
       <button
         type="button"
         className={`itw-toggle-btn${soundOn ? " itw-active" : ""}`}
@@ -2201,6 +2239,18 @@ function SpeechModule({ onBack, onNavigate }) {
 export default function InTheirWorld() {
   const [view, setView] = useState("landing");
   const [soundOn, setSoundOn] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const saved = window.localStorage.getItem("itw-dark-mode");
+    if (saved !== null) return saved === "1";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem("itw-dark-mode", darkMode ? "1" : "0");
+    document.body.style.background = darkMode ? "#14180f" : "#f7f8f5";
+    document.body.style.margin = "0";
+  }, [darkMode]);
 
   useEffect(() => {
     const prev = document.documentElement.style.scrollBehavior;
@@ -2217,16 +2267,17 @@ export default function InTheirWorld() {
   const goBack = () => setView("landing");
   const navigate = (key) => setView(key);
 
-  const glow = `rgba(${ACCENT_HEX[view] || ACCENT_HEX.landing}, .16)`;
+  const accentTable = darkMode ? ACCENT_HEX_DARK : ACCENT_HEX;
+  const glow = `rgba(${accentTable[view] || accentTable.landing}, .16)`;
   const settings = useMemo(() => ({ soundOn }), [soundOn]);
 
   return (
     <SettingsContext.Provider value={settings}>
-      <div className="itw-root">
+      <div className={`itw-root${darkMode ? " itw-dark" : ""}`}>
         <div className="itw-grain" aria-hidden="true" />
         <div className="itw-ambient" style={{ "--itw-glow": glow }} aria-hidden="true" />
         <div className="itw-app">
-          <SettingsBar soundOn={soundOn} setSoundOn={setSoundOn} />
+          <SettingsBar soundOn={soundOn} setSoundOn={setSoundOn} darkMode={darkMode} setDarkMode={setDarkMode} />
           {view === "landing" && <Landing onSelect={setView} />}
           {view === "autism" && <AutismModule key="autism" onBack={goBack} onNavigate={navigate} />}
           {view === "adhd" && <AdhdModule key="adhd" onBack={goBack} onNavigate={navigate} />}

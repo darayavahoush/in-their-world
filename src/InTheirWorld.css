@@ -7,6 +7,13 @@
   existing site without leaking styles. Fonts load via <link> in index.html.
 */
 
+/* Global reset — the page has no other stylesheet, so without this the
+   browser's default 8px body margin shows as a white border around the
+   whole card, especially visible in dark mode. */
+html,body{margin:0;padding:0;}
+body{background:#14180f;}
+#root{min-height:100vh;}
+
 .itw-root{
   --itw-bg:#f7f8f5;
   --itw-bg-2:#eef1ea;
@@ -23,14 +30,14 @@
   --itw-paper-muted:#5b6657;
   --itw-paper-border:#e0e5da;
 
-  --itw-autism:#1f7a52;
-  --itw-autism-soft:rgba(31,122,82,.14);
-  --itw-adhd:#c97600;
-  --itw-adhd-soft:rgba(201,118,0,.14);
-  --itw-dyslexia:#6d3f9e;
-  --itw-dyslexia-soft:rgba(109,63,158,.14);
-  --itw-speech:#c8481f;
-  --itw-speech-soft:rgba(200,72,31,.14);
+  --itw-autism:#2c8c72;
+  --itw-autism-soft:rgba(44,140,114,.14);
+  --itw-adhd:#8c6520;
+  --itw-adhd-soft:rgba(140,101,32,.14);
+  --itw-dyslexia:#59288c;
+  --itw-dyslexia-soft:rgba(89,40,140,.14);
+  --itw-speech:#8c422c;
+  --itw-speech-soft:rgba(140,66,44,.14);
 
   --itw-accent:var(--itw-autism);
   --itw-accent-soft:var(--itw-autism-soft);
@@ -41,17 +48,53 @@
 
   position:relative;
   background:
-    radial-gradient(1100px 640px at 90% -10%, rgba(31,122,82,.14), transparent 60%),
-    radial-gradient(900px 620px at -6% 105%, rgba(200,72,31,.13), transparent 60%),
-    radial-gradient(700px 500px at 45% 40%, rgba(201,118,0,.07), transparent 65%),
+    radial-gradient(1100px 640px at 90% -10%, rgba(44,140,114,.14), transparent 60%),
+    radial-gradient(900px 620px at -6% 105%, rgba(140,66,44,.13), transparent 60%),
+    radial-gradient(700px 500px at 45% 40%, rgba(140,101,32,.07), transparent 65%),
     var(--itw-bg);
+  transition:background-color .35s ease, color .35s ease;
   color:var(--itw-text);
   font-family:var(--font-body);
   line-height:1.6;
   -webkit-font-smoothing:antialiased;
-  border-radius:28px;
   overflow:hidden;
   isolation:isolate;
+}
+/* ---------- dark mode ----------
+   Nearly everything in this file reads color through the --itw-*
+   variables below, so overriding them here is enough to re-theme the
+   whole component — module accent colors get brighter/more saturated
+   variants so they still read clearly against a dark surface. */
+.itw-root.itw-dark{
+  --itw-bg:#14180f;
+  --itw-bg-2:#1a2015;
+  --itw-panel:#1e2519;
+  --itw-panel-2:#242c1e;
+  --itw-border:#39442f;
+  --itw-text:#eef1ea;
+  --itw-muted:#a7b19d;
+  --itw-muted-dim:#7c8672;
+
+  --itw-paper:#1e2519;
+  --itw-paper-2:#242c1e;
+  --itw-paper-text:#eef1ea;
+  --itw-paper-muted:#a7b19d;
+  --itw-paper-border:#39442f;
+
+  --itw-autism:#56d2b1;
+  --itw-autism-soft:rgba(86,210,177,.18);
+  --itw-adhd:#d2a056;
+  --itw-adhd-soft:rgba(210,160,86,.18);
+  --itw-dyslexia:#9056d2;
+  --itw-dyslexia-soft:rgba(144,86,210,.18);
+  --itw-speech:#d27356;
+  --itw-speech-soft:rgba(210,115,86,.18);
+
+  background:
+    radial-gradient(1100px 640px at 90% -10%, rgba(86,210,177,.1), transparent 60%),
+    radial-gradient(900px 620px at -6% 105%, rgba(210,115,86,.09), transparent 60%),
+    radial-gradient(700px 500px at 45% 40%, rgba(210,160,86,.05), transparent 65%),
+    var(--itw-bg);
 }
 .itw-root *{box-sizing:border-box;}
 .itw-root ::selection{background:var(--itw-accent);color:#fff;}
@@ -140,12 +183,15 @@
 }
 
 .itw-blob{position:absolute;border-radius:50%;filter:blur(58px);pointer-events:none;z-index:0;opacity:.9;}
-.itw-blob-1{width:540px;height:540px;background:radial-gradient(circle,rgba(31,122,82,.32),transparent 70%);top:-160px;right:-140px;}
-.itw-blob-2{width:480px;height:480px;background:radial-gradient(circle,rgba(200,72,31,.28),transparent 70%);top:420px;left:-180px;}
-.itw-blob-3{width:380px;height:380px;background:radial-gradient(circle,rgba(201,118,0,.26),transparent 70%);top:100px;left:38%;opacity:.7;}
+.itw-blob-1{width:540px;height:540px;background:radial-gradient(circle,rgba(44,140,114,.32),transparent 70%);top:-160px;right:-140px;}
+.itw-blob-2{width:480px;height:480px;background:radial-gradient(circle,rgba(140,66,44,.28),transparent 70%);top:420px;left:-180px;}
+.itw-blob-3{width:380px;height:380px;background:radial-gradient(circle,rgba(140,101,32,.26),transparent 70%);top:100px;left:38%;opacity:.7;}
 
 .itw-accent-word{position:relative;display:inline-block;font-style:normal;color:var(--itw-autism);text-shadow:0 0 34px var(--itw-autism-soft);}
-.itw-squiggle{position:absolute;left:0;bottom:-10px;width:100%;height:14px;color:var(--itw-adhd);filter:drop-shadow(0 2px 3px rgba(201,118,0,.3));}
+.itw-squiggle{position:absolute;left:0;bottom:-10px;width:100%;height:14px;color:var(--itw-adhd);filter:drop-shadow(0 2px 3px rgba(140,101,32,.3));}
+.itw-dark .itw-blob-1{background:radial-gradient(circle,rgba(86,210,177,.22),transparent 70%);}
+.itw-dark .itw-blob-2{background:radial-gradient(circle,rgba(210,115,86,.2),transparent 70%);}
+.itw-dark .itw-blob-3{background:radial-gradient(circle,rgba(210,160,86,.18),transparent 70%);}
 
 .itw-bento{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:18px;position:relative;z-index:1;}
 .itw-bento-0{grid-column:span 7;}
@@ -782,6 +828,18 @@
   color:#fff;font-weight:700;text-decoration:none;background:var(--itw-autism);padding:2px 10px;
   border-radius:6px;box-shadow:0 4px 10px -4px var(--itw-autism-soft);
 }
+.itw-about-points{
+  list-style:none;margin:18px 0 6px;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+}
+.itw-about-points li{
+  background:var(--itw-panel);border:1px solid var(--itw-border);border-radius:12px;padding:12px 14px;
+  font-size:13px;color:var(--itw-muted);line-height:1.5;
+}
+.itw-about-points b{
+  display:block;font-family:var(--font-display);font-weight:800;font-size:13.5px;
+  color:var(--itw-text);margin-bottom:3px;
+}
+@media (max-width:680px){.itw-about-points{grid-template-columns:1fr;}}
 /* A nod to Manas Learning's own run-together headline style
    ("EveryChildLearnsDifferently.") — used once, as a signature, not
    as a body-text pattern, so it stays legible. */
