@@ -555,7 +555,9 @@ function StrategyTabs({ home, classroom }) {
 function FactsConveyor({ facts, onComplete }) {
   const { soundOn } = useContext(SettingsContext);
   const [idx, setIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [hoverPaused, setHoverPaused] = useState(false);
+  const [tapPaused, setTapPaused] = useState(false); // touch has no hover, so tapping the card toggles this instead
+  const paused = hoverPaused || tapPaused;
   const completedRef = useRef(false);
 
   // Reset only when the actual fact set changes (e.g. US/India toggle) —
@@ -564,6 +566,7 @@ function FactsConveyor({ facts, onComplete }) {
   const factsKey = facts.map((f) => f.num).join("|");
   useEffect(() => {
     completedRef.current = false;
+    setTapPaused(false);
     setIdx(0);
   }, [factsKey]);
 
@@ -599,14 +602,15 @@ function FactsConveyor({ facts, onComplete }) {
   };
   const prev = () => jump((idx - 1 + facts.length) % facts.length);
   const next = () => jump((idx + 1) % facts.length);
+  const toggleTapPause = () => setTapPaused((v) => !v);
 
   const f = facts[idx];
 
   return (
     <div
       className="itw-conveyor"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onMouseEnter={() => setHoverPaused(true)}
+      onMouseLeave={() => setHoverPaused(false)}
     >
       <button
         type="button"
@@ -616,7 +620,15 @@ function FactsConveyor({ facts, onComplete }) {
       >
         <svg viewBox="0 0 20 20" fill="none"><path d="M12 4 6 10l6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
-      <div className="itw-conveyor-track">
+      <div
+        className="itw-conveyor-track"
+        role="button"
+        tabIndex={0}
+        aria-pressed={tapPaused}
+        aria-label={tapPaused ? "Resume auto-advancing facts" : "Pause auto-advancing facts"}
+        onClick={toggleTapPause}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggleTapPause())}
+      >
         <div
           key={idx}
           className={`itw-conveyor-card${paused ? " itw-conveyor-paused" : ""}`}
@@ -626,6 +638,12 @@ function FactsConveyor({ facts, onComplete }) {
           <div className="itw-conveyor-lbl">{f.label}</div>
           <div className="itw-conveyor-src">{f.src}</div>
         </div>
+        {tapPaused && (
+          <div className="itw-conveyor-paused-badge" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none"><rect x="5" y="4" width="3.4" height="12" rx="1" fill="currentColor"/><rect x="11.6" y="4" width="3.4" height="12" rx="1" fill="currentColor"/></svg>
+            paused — tap to resume
+          </div>
+        )}
       </div>
       <button
         type="button"
