@@ -11,24 +11,24 @@
    browser's default 8px body margin shows as a white border around the
    whole card, especially visible in dark mode. */
 html,body{margin:0;padding:0;}
-body{background:#14180f;}
+body{background:#fdeef4;}
 #root{min-height:100vh;}
 
 .itw-root{
-  --itw-bg:#f7f8f5;
-  --itw-bg-2:#eef1ea;
+  --itw-bg:#fdf2f6;
+  --itw-bg-2:#f3e9fb;
   --itw-panel:#ffffff;
-  --itw-panel-2:#f2f4ee;
-  --itw-border:#e0e5da;
+  --itw-panel-2:#f8f1f7;
+  --itw-border:#ecdcea;
   --itw-text:#20281f;
   --itw-muted:#5b6657;
   --itw-muted-dim:#8a9384;
 
   --itw-paper:#ffffff;
-  --itw-paper-2:#f2f4ee;
+  --itw-paper-2:#f8f1f7;
   --itw-paper-text:#20281f;
   --itw-paper-muted:#5b6657;
-  --itw-paper-border:#e0e5da;
+  --itw-paper-border:#ecdcea;
 
   --itw-autism:#2c8c72;
   --itw-autism-soft:rgba(44,140,114,.14);
@@ -48,9 +48,10 @@ body{background:#14180f;}
 
   position:relative;
   background:
-    radial-gradient(1100px 640px at 90% -10%, rgba(44,140,114,.14), transparent 60%),
-    radial-gradient(900px 620px at -6% 105%, rgba(140,66,44,.13), transparent 60%),
-    radial-gradient(700px 500px at 45% 40%, rgba(140,101,32,.07), transparent 65%),
+    linear-gradient(135deg, #ffe1ec 0%, #fdeef4 32%, #f2e7fb 68%, #e9dcf9 100%),
+    radial-gradient(1100px 640px at 90% -10%, rgba(44,140,114,.08), transparent 60%),
+    radial-gradient(900px 620px at -6% 105%, rgba(140,66,44,.07), transparent 60%),
+    radial-gradient(700px 500px at 45% 40%, rgba(140,101,32,.04), transparent 65%),
     var(--itw-bg);
   transition:background-color .35s ease, color .35s ease;
   color:var(--itw-text);
