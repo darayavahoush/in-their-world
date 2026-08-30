@@ -43,7 +43,7 @@ const ACCENT_HEX_DARK = {
   landing: "86,210,177",
   autism: "86,210,177",
   adhd: "210,160,86",
-  dyslexia: "144,86,210",
+  dyslexia: "170,126,221",
   speech: "210,115,86",
 };
 
