@@ -2351,7 +2351,7 @@ export default function InTheirWorld() {
 
   useEffect(() => {
     window.localStorage.setItem("itw-dark-mode", darkMode ? "1" : "0");
-    document.body.style.background = darkMode ? "#14180f" : "#fdeef4";
+    document.body.style.background = darkMode ? "#14180f" : "#f5e2f0";
     document.body.style.margin = "0";
   }, [darkMode]);
 
