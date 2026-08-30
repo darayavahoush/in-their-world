@@ -556,6 +556,14 @@ body{background:#14180f;}
 .itw-module[data-accent] .itw-fact-card{--card-accent:var(--itw-accent);}
 .itw-fact-note{margin-top:16px;font-size:14.5px;color:var(--itw-muted);border-left:2px solid var(--itw-accent);padding-left:14px;font-style:italic;}
 
+.itw-error-boundary{
+  max-width:480px;margin:60px auto;text-align:center;padding:40px 28px;
+  background:var(--itw-panel);border:1.5px solid var(--itw-border);border-radius:20px;
+}
+.itw-error-icon{font-size:34px;margin-bottom:10px;}
+.itw-error-boundary h2{font-family:var(--font-display);font-size:20px;margin:0 0 8px;color:var(--itw-text);}
+.itw-error-boundary p{color:var(--itw-muted);font-size:14.5px;line-height:1.6;margin:0 0 20px;}
+
 /* ---------- facts conveyor belt: one fact at a time, pops big & bright, slides off ---------- */
 .itw-conveyor{
   position:relative;border-radius:20px;padding:38px 20px 26px;text-align:center;overflow:hidden;
@@ -636,6 +644,48 @@ body{background:#14180f;}
   background:var(--itw-accent);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M4 10h11M10 5l5 5-5 5' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/70% no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M4 10h11M10 5l5 5-5 5' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/70% no-repeat;
+}
+.itw-strat-hidden{display:none;}
+
+.itw-help-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  margin-top:24px;padding-top:20px;border-top:1px solid var(--itw-border);
+}
+.itw-print-btn{flex-shrink:0;}
+.itw-manas-cta{
+  flex:1 1 260px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  text-decoration:none;color:var(--itw-text);background:var(--itw-accent-soft);border:1px solid var(--itw-accent);
+  border-radius:14px;padding:12px 16px;font-size:13.5px;line-height:1.4;transition:background .15s ease;
+}
+.itw-manas-cta:hover{background:var(--itw-accent);color:#fff;}
+.itw-manas-cta-arrow{flex-shrink:0;font-weight:700;font-family:var(--font-display);white-space:nowrap;}
+
+@media print{
+  .itw-grain, .itw-ambient, .itw-settings-bar,
+  .itw-module-top, .itw-toc, .itw-mpreview,
+  .itw-viewfinder, .itw-sim-controls,
+  .itw-block:not(.itw-help-block),
+  .itw-print-hide{ display:none !important; }
+
+  .itw-strat-hidden{ display:block !important; }
+  .itw-strat-list{ margin-bottom:18px; }
+  .itw-strat-list::before{
+    content:attr(data-print-label); display:block; font-weight:700; font-size:13px;
+    text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; color:#000;
+  }
+
+  html, body, .itw-root, .itw-app, .itw-view, .itw-help-block{
+    background:#fff !important; color:#111 !important; box-shadow:none !important;
+  }
+  .itw-help-block{ border:none !important; padding:0 !important; }
+  .itw-help-block::before{ display:none !important; }
+  .itw-strat-list li{
+    background:#fff !important; border:1px solid #999 !important; box-shadow:none !important; color:#111 !important;
+  }
+  .itw-strat-list li::before{ background:#000 !important; }
+  .itw-module-head{ margin-bottom:20px; }
+  .itw-eyebrow{ color:#444 !important; }
+  .itw-mtitle{ color:#000 !important; }
 }
 
 /* ================= AUTISM sim ================= */

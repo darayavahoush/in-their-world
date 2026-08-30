@@ -47,6 +47,46 @@ const ACCENT_HEX_DARK = {
   speech: "210,115,86",
 };
 
+/* ---------------- Error boundary ----------------
+   A runtime error inside any one module (a bad simulation state, a
+   malformed fact, whatever) used to blank the whole screen with no way
+   back. This catches it at the module level and offers a way out instead. */
+class ModuleErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, info) {
+    // eslint-disable-next-line no-console
+    console.error("In Their World — module crashed:", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="itw-error-boundary">
+          <div className="itw-error-icon" aria-hidden="true">⚠️</div>
+          <h2>Something went wrong</h2>
+          <p>This module hit an unexpected error. Your progress elsewhere is safe — head back and try again.</p>
+          <button
+            type="button"
+            className="itw-btn-primary"
+            onClick={() => {
+              this.setState({ hasError: false });
+              this.props.onBack && this.props.onBack();
+            }}
+          >
+            ← Back to all modules
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /* ---------------- Settings context (sound) ---------------- */
 
 const SettingsContext = createContext({ soundOn: true });
@@ -526,7 +566,7 @@ function StrategyTabs({ home, classroom }) {
   const [tab, setTab] = useState("home");
   return (
     <>
-      <div className="itw-strat-tabs">
+      <div className="itw-strat-tabs itw-print-hide">
         <button
           className={`itw-btn-ghost${tab === "home" ? " itw-active" : ""}`}
           onClick={() => setTab("home")}
@@ -540,12 +580,35 @@ function StrategyTabs({ home, classroom }) {
           In the classroom
         </button>
       </div>
-      <ul className="itw-strat-list">
-        {(tab === "home" ? home : classroom).map((item, i) => (
+      {/* Both lists stay in the DOM (not conditionally rendered) so the print
+          stylesheet can reveal both regardless of which tab is active on screen. */}
+      <ul className={`itw-strat-list${tab === "home" ? "" : " itw-strat-hidden"}`} data-print-label="At home">
+        {home.map((item, i) => (
+          <li key={i}>{item}</li>
+        ))}
+      </ul>
+      <ul className={`itw-strat-list${tab === "class" ? "" : " itw-strat-hidden"}`} data-print-label="In the classroom">
+        {classroom.map((item, i) => (
           <li key={i}>{item}</li>
         ))}
       </ul>
     </>
+  );
+}
+
+/* Print button + a quiet, non-pushy link to Manas Learning's actual
+   services — shown once per module, right after the strategies. */
+function HelpFooter() {
+  return (
+    <div className="itw-help-footer itw-print-hide">
+      <button type="button" className="itw-btn-ghost itw-print-btn" onClick={() => window.print()}>
+        🖨️ Print these strategies
+      </button>
+      <a className="itw-manas-cta" href="https://www.manaslearning.com" target="_blank" rel="noreferrer">
+        <span>If this felt familiar, Manas Learning works with kids like this every day.</span>
+        <span className="itw-manas-cta-arrow">Learn more →</span>
+      </a>
+    </div>
   );
 }
 
@@ -1206,6 +1269,7 @@ function AutismModule({ onBack, onNavigate }) {
             "Build in movement or quiet breaks between high-stimulation activities like assemblies or fire drills.",
           ]}
         />
+        <HelpFooter />
       </section>
     </ModuleShell>
   );
@@ -1567,6 +1631,7 @@ function AdhdModule({ onBack, onNavigate }) {
             "Give a heads-up before transitions; abrupt switches are where attention is most likely to derail.",
           ]}
         />
+        <HelpFooter />
       </section>
     </ModuleShell>
   );
@@ -1845,6 +1910,7 @@ function DyslexiaModule({ onBack, onNavigate }) {
             "Use structured literacy / explicit phonics instruction — it's the intervention with the strongest evidence behind it.",
           ]}
         />
+        <HelpFooter />
       </section>
     </ModuleShell>
   );
@@ -2265,6 +2331,7 @@ function SpeechModule({ onBack, onNavigate }) {
             "Normalize communication differences openly with the whole class so the child isn't the only one navigating stigma.",
           ]}
         />
+        <HelpFooter />
       </section>
     </ModuleShell>
   );
@@ -2315,10 +2382,26 @@ export default function InTheirWorld() {
         <div className="itw-app">
           <SettingsBar soundOn={soundOn} setSoundOn={setSoundOn} darkMode={darkMode} setDarkMode={setDarkMode} />
           {view === "landing" && <Landing onSelect={setView} />}
-          {view === "autism" && <AutismModule key="autism" onBack={goBack} onNavigate={navigate} />}
-          {view === "adhd" && <AdhdModule key="adhd" onBack={goBack} onNavigate={navigate} />}
-          {view === "dyslexia" && <DyslexiaModule key="dyslexia" onBack={goBack} onNavigate={navigate} />}
-          {view === "speech" && <SpeechModule key="speech" onBack={goBack} onNavigate={navigate} />}
+          {view === "autism" && (
+            <ModuleErrorBoundary onBack={goBack}>
+              <AutismModule key="autism" onBack={goBack} onNavigate={navigate} />
+            </ModuleErrorBoundary>
+          )}
+          {view === "adhd" && (
+            <ModuleErrorBoundary onBack={goBack}>
+              <AdhdModule key="adhd" onBack={goBack} onNavigate={navigate} />
+            </ModuleErrorBoundary>
+          )}
+          {view === "dyslexia" && (
+            <ModuleErrorBoundary onBack={goBack}>
+              <DyslexiaModule key="dyslexia" onBack={goBack} onNavigate={navigate} />
+            </ModuleErrorBoundary>
+          )}
+          {view === "speech" && (
+            <ModuleErrorBoundary onBack={goBack}>
+              <SpeechModule key="speech" onBack={goBack} onNavigate={navigate} />
+            </ModuleErrorBoundary>
+          )}
         </div>
       </div>
     </SettingsContext.Provider>
