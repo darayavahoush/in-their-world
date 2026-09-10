@@ -91,13 +91,29 @@ class ModuleErrorBoundary extends React.Component {
 
 const SettingsContext = createContext({ soundOn: true });
 
-/* ---------------- Audio engine (Web Audio API, no external assets) ---------------- */
+/* ---------------- Audio engine (Web Audio API) ----------------
+   Every sound below is synthesized live — there are no bundled audio
+   files, so there's nothing to license or download.
+
+   If you want REAL recorded clips instead (an actual chair scraping,
+   people yelling, mall ambience, etc.), drop royalty-free files
+   (e.g. from freesound.org, pixabay.com/sound-effects, or zapsplat.com)
+   into `public/sounds/`, named after the cue "kind" they should replace —
+   e.g. `public/sounds/scrape.mp3`, `public/sounds/shout.mp3`,
+   `public/sounds/argue.mp3`, `public/sounds/announce.mp3`. The kinds are
+   listed in the `cue(kind, ...)` switch below and in the SCENARIOS event
+   lists further down this file. Any kind with a matching file in that
+   folder is played as-is; anything missing quietly falls back to the
+   synthesized version — you don't have to supply all of them. */
 
 class AudioEngine {
   constructor() {
     this.ctx = null;
     this.master = null;
     this.drones = new Map();
+    this.samples = new Map(); // kind -> decoded AudioBuffer, once loaded
+    this.sampleMissing = new Set(); // kinds we've confirmed have no file
+    this.samplePending = new Set(); // kinds currently being fetched
   }
 
   ensure() {
@@ -111,6 +127,52 @@ class AudioEngine {
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
     return this.ctx;
+  }
+
+  // Tries `/sounds/<kind>.mp3` then `.wav`. Fire-and-forget: the first
+  // time a kind is cued with no file yet loaded, this kicks off a fetch
+  // in the background and the synthesized fallback plays for *that* cue;
+  // once the fetch resolves (or confirms nothing's there), later cues of
+  // the same kind either play the real clip or stop trying.
+  loadSample(kind) {
+    if (this.samples.has(kind) || this.sampleMissing.has(kind) || this.samplePending.has(kind)) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    this.samplePending.add(kind);
+    const tryExt = (exts) => {
+      if (exts.length === 0) {
+        this.sampleMissing.add(kind);
+        this.samplePending.delete(kind);
+        return;
+      }
+      const [ext, ...rest] = exts;
+      fetch(`/sounds/${kind}.${ext}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("missing");
+          return res.arrayBuffer();
+        })
+        .then((buf) => ctx.decodeAudioData(buf))
+        .then((decoded) => {
+          this.samples.set(kind, decoded);
+          this.samplePending.delete(kind);
+        })
+        .catch(() => tryExt(rest));
+    };
+    tryExt(["mp3", "wav"]);
+  }
+
+  playSample(kind, gain = 1) {
+    const ctx = this.ctx;
+    const buffer = this.samples.get(kind);
+    if (!ctx || !buffer) return false;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const g = ctx.createGain();
+    g.gain.value = Math.max(0.05, Math.min(1.5, gain)) * 0.7;
+    src.connect(g);
+    g.connect(this.master);
+    src.start();
+    return true;
   }
 
   tone({ freq = 440, type = "sine", duration = 0.2, gain = 0.14, detune = 0, delay = 0 } = {}) {
@@ -210,8 +272,15 @@ class AudioEngine {
   // A short, distinct sound tied to a *specific* sensory event (a chair
   // scraping, a laugh, a slammed door) rather than generic static — each
   // kind gets its own small signature built from the primitives above.
+  // If a real recorded clip has been dropped into public/sounds/ for this
+  // kind (see the loader above), that plays instead of the synthesis.
   cue(kind, gain = 1) {
     const g = Math.max(0.15, Math.min(1.4, gain));
+    if (this.samples.has(kind)) {
+      this.playSample(kind, g);
+      return;
+    }
+    if (!this.sampleMissing.has(kind)) this.loadSample(kind);
     switch (kind) {
       case "laugh":
         this.tone({ freq: 500, type: "triangle", duration: 0.09, gain: 0.12 * g });
@@ -224,7 +293,10 @@ class AudioEngine {
         break;
       case "scrape":
       case "screech":
-        this.sweep({ from: 900, to: 2600, duration: 0.35, type: "sawtooth", gain: 0.11 * g });
+        // A real scrape/screech is mostly noise, not a clean tone — layer a
+        // filtered noise burst under the pitch sweep so it rasps instead of whistling.
+        this.sweep({ from: 900, to: 2600, duration: 0.35, type: "sawtooth", gain: 0.09 * g });
+        this.noiseBurst({ duration: 0.32, gain: 0.1 * g, filterFreq: 2000, type: "bandpass" });
         break;
       case "buzzphone":
         for (let i = 0; i < 5; i++) this.tone({ freq: 180, type: "square", duration: 0.05, gain: 0.07 * g, delay: i * 0.06 });
@@ -236,8 +308,11 @@ class AudioEngine {
         this.noiseBurst({ duration: 0.28, gain: 0.13 * g, filterFreq: 2600, type: "highpass" });
         break;
       case "shout":
-        this.noiseBurst({ duration: 0.2, gain: 0.12 * g, filterFreq: 1200 });
-        this.tone({ freq: 300, type: "sawtooth", duration: 0.22, gain: 0.1 * g, delay: 0.02 });
+        // Voice-like yelling: a noisy core plus two slightly-detuned tones
+        // (rough stand-in for vocal formants) instead of one clean sawtooth.
+        this.noiseBurst({ duration: 0.22, gain: 0.11 * g, filterFreq: 1400, type: "bandpass" });
+        this.tone({ freq: 300, type: "sawtooth", duration: 0.24, gain: 0.09 * g, detune: -15, delay: 0.01 });
+        this.tone({ freq: 340, type: "sawtooth", duration: 0.22, gain: 0.07 * g, detune: 20, delay: 0.03 });
         break;
       case "whir":
       case "hum":
@@ -248,8 +323,10 @@ class AudioEngine {
         this.tone({ freq: 90, type: "triangle", duration: 0.09, gain: 0.1 * g, delay: 0.28 });
         break;
       case "argue":
-        this.tone({ freq: 340, type: "square", duration: 0.12, gain: 0.08 * g });
-        this.tone({ freq: 420, type: "square", duration: 0.12, gain: 0.08 * g, delay: 0.1 });
+        // Two overlapping voices, not two clean beeps.
+        this.noiseBurst({ duration: 0.16, gain: 0.06 * g, filterFreq: 1100, type: "bandpass" });
+        this.tone({ freq: 340, type: "sawtooth", duration: 0.14, gain: 0.06 * g, detune: -10 });
+        this.tone({ freq: 420, type: "sawtooth", duration: 0.14, gain: 0.06 * g, detune: 15, delay: 0.1 });
         break;
       case "rustle":
         this.noiseBurst({ duration: 0.14, gain: 0.05 * g, filterFreq: 3400, type: "highpass" });
@@ -268,6 +345,20 @@ class AudioEngine {
       case "flicker":
         this.tone({ freq: 2200, type: "square", duration: 0.02, gain: 0.03 * g });
         this.tone({ freq: 2200, type: "square", duration: 0.02, gain: 0.03 * g, delay: 0.08 });
+        break;
+      // PA/tannoy-style announcement — starts low and climbs, rather than
+      // the high-to-low "alarm" sweeps used elsewhere in this file.
+      case "announce":
+        this.sweep({ from: 220, to: 1500, duration: 0.6, type: "sine", gain: 0.09 * g });
+        break;
+      // A sudden glare (storefront glass, a camera flash, sun off a slide) —
+      // paired in AutismSim with an actual full-screen bright flash.
+      case "glare":
+        this.tone({ freq: 1900, type: "sine", duration: 0.14, gain: 0.05 * g });
+        break;
+      case "bark":
+        this.tone({ freq: 220, type: "sawtooth", duration: 0.08, gain: 0.12 * g });
+        this.tone({ freq: 180, type: "sawtooth", duration: 0.09, gain: 0.1 * g, delay: 0.15 });
         break;
       default:
         this.noiseBurst({ duration: 0.15, gain: 0.08 * g });
@@ -622,6 +713,31 @@ function FactsConveyor({ facts, onComplete }) {
   const [tapPaused, setTapPaused] = useState(false); // touch has no hover, so tapping the card toggles this instead
   const paused = hoverPaused || tapPaused;
   const completedRef = useRef(false);
+  // Facts used to start reading themselves aloud the instant this section
+  // mounted — which happens as soon as the module loads, well before
+  // anyone has scrolled down to "The data". Gate speech on the section
+  // actually being visible instead.
+  const [inView, setInView] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.35 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Reset only when the actual fact set changes (e.g. US/India toggle) —
   // not on every unrelated re-render, since the facts array is a fresh
@@ -633,9 +749,10 @@ function FactsConveyor({ facts, onComplete }) {
     setIdx(0);
   }, [factsKey]);
 
-  // Read each fact aloud as it comes up on the belt, if sound is on.
+  // Read each fact aloud as it comes up on the belt, if sound is on and
+  // the section has actually scrolled into view.
   useEffect(() => {
-    if (!soundOn) return;
+    if (!soundOn || !inView) return;
     const f = facts[idx];
     if (!f) return;
     if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
@@ -644,7 +761,7 @@ function FactsConveyor({ facts, onComplete }) {
       if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, soundOn, factsKey]);
+  }, [idx, soundOn, factsKey, inView]);
 
   const handleEnd = () => {
     if (paused) return;
@@ -672,6 +789,7 @@ function FactsConveyor({ facts, onComplete }) {
   return (
     <div
       className="itw-conveyor"
+      ref={containerRef}
       onMouseEnter={() => setHoverPaused(true)}
       onMouseLeave={() => setHoverPaused(false)}
     >
@@ -873,25 +991,68 @@ function HowTo({ steps }) {
 
 // Concrete sensory events, each with its own icon and its own synthesized
 // sound (see AudioEngine.cue) — this is what's actually competing for
-// attention, not abstract static.
-const SOUND_EVENTS = [
-  { text: "chair scraping", icon: "🪑", kind: "scrape" },
-  { text: "someone's laughing", icon: "😄", kind: "laugh" },
-  { text: "the light is humming", icon: "💡", kind: "hum" },
-  { text: "bell in 3...2...", icon: "🔔", kind: "bell" },
-  { text: "LOOK AT ME WHEN I TALK", icon: "📢", kind: "shout" },
-  { text: "the fan is loud", icon: "🌀", kind: "whir" },
-  { text: "papers rustling", icon: "📄", kind: "rustle" },
-  { text: "someone dropped a tray", icon: "🍽️", kind: "tray" },
-  { text: "someone's phone buzzing", icon: "📳", kind: "buzzphone" },
-  { text: "footsteps behind you", icon: "👣", kind: "footsteps" },
-  { text: "chalk squeaking", icon: "✏️", kind: "screech" },
-  { text: "two kids arguing", icon: "🗣️", kind: "argue" },
-  { text: "door slamming", icon: "🚪", kind: "slam" },
-  { text: "your name, called twice", icon: "🙋", kind: "call" },
-  { text: "fluorescent flicker", icon: "💡", kind: "flicker" },
-  { text: "pencil tapping", icon: "✏️", kind: "tap" },
-];
+// attention, not abstract static. Grouped by real-world setting, since a
+// mall, a grocery store and a kids' park each throw a different mix of
+// noise, light and crowding at a child.
+const SCENARIOS = {
+  mall: {
+    label: "Shopping mall",
+    tag: "Busiest — recommended",
+    desc: "Bright showroom lights, music overhead, a food-court hum, AC blasting cold air on your neck.",
+    bg:
+      "radial-gradient(120% 130% at 50% 0%, rgba(255,255,255,.65), transparent 62%), linear-gradient(165deg, #fff7e2, #ffdf9e)",
+    events: [
+      { text: "PA announcement crackles overhead", icon: "📢", kind: "announce" },
+      { text: "escalator humming non-stop", icon: "🔺", kind: "hum" },
+      { text: "food court clatter", icon: "🍜", kind: "tray" },
+      { text: "AC vent blasting cold air", icon: "❄️", kind: "whir" },
+      { text: "storefront glass glaring", icon: "✨", kind: "glare" },
+      { text: "a kid crying near the toy shop", icon: "😭", kind: "shout" },
+      { text: "trolley wheels squeaking", icon: "🛒", kind: "screech" },
+      { text: "sale bell ringing", icon: "🔔", kind: "bell" },
+      { text: "crowd chatter swelling", icon: "🗣️", kind: "argue" },
+      { text: "a phone flash goes off", icon: "📸", kind: "glare" },
+      { text: "elevator ding", icon: "🛗", kind: "call" },
+      { text: "your name, called over the noise", icon: "🙋", kind: "call" },
+    ],
+  },
+  grocery: {
+    label: "Grocery store",
+    desc: "Fluorescent aisles, a freezer hum, trolleys clanging, a billing counter beeping.",
+    bg:
+      "radial-gradient(120% 130% at 50% 0%, rgba(255,255,255,.6), transparent 62%), linear-gradient(165deg, #f0f9ff, #cdeafd)",
+    events: [
+      { text: "checkout beeping, again and again", icon: "🛍️", kind: "tap" },
+      { text: "freezer aisle humming", icon: "🧊", kind: "hum" },
+      { text: "trolley wheels clanging", icon: "🛒", kind: "screech" },
+      { text: "aisle tube-light flickering", icon: "💡", kind: "glare" },
+      { text: "a shelf gets knocked over", icon: "🥫", kind: "crash" },
+      { text: "billing queue murmuring", icon: "🗣️", kind: "argue" },
+      { text: "cardboard boxes being stacked", icon: "📦", kind: "tray" },
+      { text: "weighing scale beeping", icon: "⚖️", kind: "tap" },
+      { text: "\"today's offer\" announcement", icon: "📢", kind: "announce" },
+      { text: "a trolley bumps into you", icon: "🛒", kind: "slam" },
+    ],
+  },
+  park: {
+    label: "Kids' park",
+    desc: "Other children shrieking mid-play, a creaking swing, a dog barking, an ice-cream cart jingle.",
+    bg:
+      "radial-gradient(120% 130% at 50% 0%, rgba(255,255,255,.55), transparent 62%), linear-gradient(165deg, #f2fff2, #c9f2d3)",
+    events: [
+      { text: "kids screaming mid-play", icon: "🧒", kind: "shout" },
+      { text: "swing chains creaking", icon: "🎠", kind: "screech" },
+      { text: "a dog barking nearby", icon: "🐕", kind: "bark" },
+      { text: "ice-cream cart jingle", icon: "🍦", kind: "bell" },
+      { text: "sun glaring off the slide", icon: "☀️", kind: "glare" },
+      { text: "a ball bounces behind you", icon: "⚽", kind: "footsteps" },
+      { text: "parents chatting loudly", icon: "🗣️", kind: "argue" },
+      { text: "your name, called across the park", icon: "🙋", kind: "call" },
+      { text: "birds squawking overhead", icon: "🐦", kind: "laugh" },
+      { text: "someone's phone buzzing", icon: "📳", kind: "buzzphone" },
+    ],
+  },
+};
 
 const TOTAL_ROUNDS = 8;
 const ROUND_TIME_LIMIT = (round) => Math.max(1.1, 2.8 - round * 0.22);
@@ -900,6 +1061,9 @@ function AutismSim() {
   const { soundOn } = useContext(SettingsContext);
   const [phase, setPhase] = useState("intro"); // intro | task | done
   const [filter, setFilter] = useState(10); // exploration-only, before the graded task starts
+  const [scenario, setScenario] = useState("mall"); // mall | grocery | park
+  const [perspective, setPerspective] = useState("central"); // central | peripheral
+  const [glare, setGlare] = useState(false);
   const [round, setRound] = useState(0);
   const [targetPos, setTargetPos] = useState({ top: 50, left: 50 });
   const [decoys, setDecoys] = useState([]);
@@ -929,20 +1093,29 @@ function AutismSim() {
   const cueIdRef = useRef(0);
   const cueTimeoutsRef = useRef([]);
   const intensityBucket = Math.round(intensity * 10);
+  const glareTimeoutRef = useRef(null);
 
   useEffect(() => {
     cueTimeoutsRef.current.forEach(clearTimeout);
     cueTimeoutsRef.current = [];
     if (phase === "done") return;
     let cancelled = false;
+    const pool = SCENARIOS[scenario].events;
     const spawn = () => {
       if (cancelled) return;
-      const evt = SOUND_EVENTS[Math.floor(Math.random() * SOUND_EVENTS.length)];
+      const evt = pool[Math.floor(Math.random() * pool.length)];
       const id = cueIdRef.current++;
       const top = 8 + Math.random() * 74;
       const left = 4 + Math.random() * 76;
       setCues((prev) => [...prev.slice(-6), { id, ...evt, top, left }]);
       if (soundOn) audio.cue(evt.kind, 0.4 + (intensityBucket / 10) * 0.9);
+      // A glare/flash event gets an actual bright flash across the whole
+      // scene, on top of its sound — this isn't meant to be subtle.
+      if (evt.kind === "glare") {
+        setGlare(true);
+        clearTimeout(glareTimeoutRef.current);
+        glareTimeoutRef.current = setTimeout(() => setGlare(false), 260);
+      }
       const life = setTimeout(() => {
         setCues((prev) => prev.filter((c) => c.id !== id));
       }, 1500 + Math.random() * 600);
@@ -958,7 +1131,7 @@ function AutismSim() {
       cueTimeoutsRef.current = [];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, intensityBucket, soundOn]);
+  }, [phase, intensityBucket, soundOn, scenario]);
 
   useEffect(() => {
     if (!soundOn) {
@@ -973,18 +1146,23 @@ function AutismSim() {
     audio.setDroneGain("autism", soundOn ? intensity * 0.055 : 0.0001);
   }, [intensity, soundOn]);
 
+  const sceneLabel = SCENARIOS[scenario].label.toLowerCase();
   const readout =
     phase === "task"
       ? round >= 5
-        ? "Full overload — this is what an unfiltered classroom feels like on its worst day. Find the real target anyway, before time runs out."
+        ? `Full overload — this is what an unfiltered ${sceneLabel} feels like on its worst day. Find the real target anyway, before time runs out.`
         : "Noise climbs and time shrinks every round, on its own. There's no slider now — this is the part that doesn't turn down on demand."
       : filter < 25
-      ? "This is closer to a packed classroom during free time — bright lights, side conversations, a chair scraping."
+      ? `This is closer to a packed ${sceneLabel} at its busiest — bright lights, crowd noise, the AC running.`
       : filter < 55
-      ? "Partial filtering — like stepping into a slightly quieter hallway, but the noise hasn't gone away."
+      ? "Partial filtering — like stepping just outside the door, but the noise hasn't gone away."
       : filter < 85
       ? "This is closer to what noise-reducing headphones and dimmer lighting can offer."
       : "This is what a genuinely quiet, low-stimulation space feels like — the task hasn't changed, only the ability to focus on it.";
+  const perspectiveNote =
+    perspective === "peripheral"
+      ? "Using side vision — many autistic kids prefer this because looking straight at something is too intense. It's genuinely harder to tell target from decoy out here."
+      : "Looking straight at it, full detail — but for a lot of autistic kids, this direct focus is itself what feels like too much, too fast.";
 
   const randPos = (avoid) => {
     let top, left, ok;
@@ -999,6 +1177,36 @@ function AutismSim() {
     return { top, left };
   };
 
+  // Peripheral vision: everything is pushed out to the edges of the frame
+  // (where side vision actually is) rather than anywhere on screen — and
+  // rendered blurred/low-contrast in the JSX below, since detail out there
+  // is genuinely hard to make out.
+  const randPosEdge = (avoid) => {
+    let top, left, ok;
+    do {
+      const edge = Math.floor(Math.random() * 4);
+      if (edge === 0) {
+        top = 4 + Math.random() * 10;
+        left = 6 + Math.random() * 80;
+      } else if (edge === 1) {
+        top = 78 + Math.random() * 12;
+        left = 6 + Math.random() * 80;
+      } else if (edge === 2) {
+        top = 20 + Math.random() * 56;
+        left = 3 + Math.random() * 9;
+      } else {
+        top = 20 + Math.random() * 56;
+        left = 84 + Math.random() * 9;
+      }
+      ok = true;
+      for (const p of avoid) {
+        if (Math.abs(p.top - top) < 13 && Math.abs(p.left - left) < 13) ok = false;
+      }
+    } while (!ok);
+    return { top, left };
+  };
+  const nextPos = (avoid) => (perspective === "peripheral" ? randPosEdge(avoid) : randPos(avoid));
+
   const clearTimer = () => {
     if (timerRafRef.current) {
       clearInterval(timerRafRef.current);
@@ -1007,12 +1215,12 @@ function AutismSim() {
   };
 
   const setupRound = (roundNum) => {
-    const t = randPos([]);
+    const t = nextPos([]);
     const decoyCount = roundNum >= 6 ? 5 : roundNum >= 4 ? 4 : roundNum >= 2 ? 3 : 2;
     const avoid = [t];
     const nd = [];
     for (let i = 0; i < decoyCount; i++) {
-      const p = randPos(avoid);
+      const p = nextPos(avoid);
       avoid.push(p);
       nd.push({ id: decoyIdRef.current++, ...p });
     }
@@ -1093,7 +1301,12 @@ function AutismSim() {
     setRating(null);
   };
 
-  useEffect(() => clearTimer, []);
+  useEffect(() => {
+    return () => {
+      clearTimer();
+      clearTimeout(glareTimeoutRef.current);
+    };
+  }, []);
 
   const timerPct = roundLimitRef.current ? Math.max(0, Math.min(100, (timeLeft / roundLimitRef.current) * 100)) : 100;
   const targetColor = camouflage > 0 ? `rgba(229,72,77,${(1 - camouflage * 0.75).toFixed(2)})` : undefined;
@@ -1101,21 +1314,63 @@ function AutismSim() {
   return (
     <div className="itw-sim">
       <div className="itw-sim-instructions">
-        Find the one real dot among the decoys, {TOTAL_ROUNDS} rounds — it only gets louder from here.
+        Pick a place and a way of looking, then find the one real dot among the decoys, {TOTAL_ROUNDS} rounds — it only gets louder from here.
       </div>
       <HowTo
         steps={[
-          "Spot the one real dot",
-          "Click it before time runs out",
-          "Noise & decoys ramp up each round",
+          "Choose a setting and central vs. peripheral vision",
+          "Spot the one real dot among the decoys",
+          "Click it before time runs out — noise & decoys ramp up each round",
         ]}
       />
+      {phase === "intro" && (
+        <div className="itw-scenario-picker">
+          <div className="itw-picker-group">
+            <label className="itw-mono itw-picker-label">Setting</label>
+            <div className="itw-strat-tabs">
+              {Object.entries(SCENARIOS).map(([key, s]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`itw-btn-ghost${scenario === key ? " itw-active" : ""}`}
+                  onClick={() => setScenario(key)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <p className="itw-picker-desc">{SCENARIOS[scenario].desc}</p>
+          </div>
+          <div className="itw-picker-group">
+            <label className="itw-mono itw-picker-label">Vision</label>
+            <div className="itw-strat-tabs">
+              <button
+                type="button"
+                className={`itw-btn-ghost${perspective === "central" ? " itw-active" : ""}`}
+                onClick={() => setPerspective("central")}
+              >
+                Central vision
+              </button>
+              <button
+                type="button"
+                className={`itw-btn-ghost${perspective === "peripheral" ? " itw-active" : ""}`}
+                onClick={() => setPerspective("peripheral")}
+              >
+                Peripheral vision
+              </button>
+            </div>
+            <p className="itw-picker-desc">{perspectiveNote}</p>
+          </div>
+        </div>
+      )}
       <Viewfinder
         hud={{
           left: phase === "task" ? `ROUND ${round}/${TOTAL_ROUNDS}` : "STANDBY",
           right: `${Math.round(intensity * 100)}% NOISE`,
         }}
+        stageStyle={{ background: SCENARIOS[scenario].bg }}
       >
+        <div className={`itw-glare-overlay${glare ? " itw-glare-flash" : ""}`} aria-hidden="true" />
         {phase === "task" && (
           <div className="itw-round-timer">
             <div className="itw-round-timer-fill" style={{ width: `${timerPct}%` }} />
@@ -1133,7 +1388,7 @@ function AutismSim() {
         {phase === "task" && (
           <>
             <div
-              className="itw-sensory-target"
+              className={`itw-sensory-target${perspective === "peripheral" ? " itw-peripheral-blur" : ""}`}
               role="button"
               tabIndex={0}
               style={{ top: `${targetPos.top}%`, left: `${targetPos.left}%` }}
@@ -1145,7 +1400,7 @@ function AutismSim() {
             {decoys.map((d) => (
               <div
                 key={d.id}
-                className="itw-decoy-target"
+                className={`itw-decoy-target${perspective === "peripheral" ? " itw-peripheral-blur" : ""}`}
                 role="button"
                 tabIndex={0}
                 style={{ top: `${d.top}%`, left: `${d.left}%` }}

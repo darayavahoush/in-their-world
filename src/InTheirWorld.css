@@ -689,7 +689,7 @@ body{background:#f5e2f0;}
 /* ================= AUTISM sim ================= */
 .itw-sensory-target{position:absolute;z-index:5;text-align:center;transition:top .18s ease, left .18s ease;cursor:pointer;}
 .itw-sensory-target .itw-dot{width:46px;height:46px;border-radius:50%;background:#e5484d;margin:0 auto 8px;box-shadow:0 0 0 10px rgba(229,72,77,.15), 0 0 30px rgba(229,72,77,.35);animation:itw-target-pulse 1.6s ease-in-out infinite;}
-.itw-sensory-target p{font-size:13px;color:var(--itw-muted);margin:0;font-family:var(--font-mono);letter-spacing:.04em;}
+.itw-sensory-target p{font-size:13px;color:#f2ede0;background:rgba(20,16,10,.72);padding:3px 10px;border-radius:99px;margin:0;font-family:var(--font-mono);letter-spacing:.04em;display:inline-block;}
 @keyframes itw-target-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
 .itw-decoy-target{position:absolute;z-index:5;text-align:center;cursor:pointer;}
 .itw-decoy-target .itw-dot{width:46px;height:46px;border-radius:50%;background:#c95a4e;margin:0 auto;box-shadow:0 0 0 10px rgba(201,90,78,.15), 0 0 30px rgba(201,90,78,.35);animation:itw-decoy-flicker 0.9s steps(3) infinite;}
@@ -715,6 +715,23 @@ body{background:#f5e2f0;}
 .itw-round-pips span.itw-pip-current{border-color:var(--itw-accent);box-shadow:0 0 0 3px var(--itw-accent-soft);}
 .itw-round-timer{position:absolute;top:0;left:0;right:0;height:5px;background:rgba(255,255,255,.12);z-index:11;}
 .itw-round-timer-fill{height:100%;background:var(--itw-autism);transition:width .06s linear;}
+
+/* setting + vision pickers, shown before the autism task starts */
+.itw-scenario-picker{padding:16px 22px 4px;background:var(--itw-panel-2);display:flex;flex-wrap:wrap;gap:24px;}
+.itw-picker-group{flex:1 1 240px;min-width:220px;}
+.itw-picker-label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--itw-muted);margin-bottom:8px;}
+.itw-picker-desc{margin:8px 0 0;font-size:13px;color:var(--itw-muted);line-height:1.4;}
+
+/* a sudden, genuinely bright flash across the whole scene — not a subtle cue */
+.itw-glare-overlay{position:absolute;inset:0;z-index:20;background:#fff;opacity:0;pointer-events:none;}
+.itw-glare-flash{animation:itw-glare-pulse .35s ease-out;}
+@keyframes itw-glare-pulse{0%{opacity:0;}12%{opacity:.97;}100%{opacity:0;}}
+
+/* peripheral vision: dots pushed to the edges (handled in JS) render
+   blurred and low-contrast, since detail out there is genuinely hard to
+   make out — the point isn't to hide them, it's to make them effortful. */
+.itw-peripheral-blur{filter:blur(1.6px);opacity:.6;}
+.itw-peripheral-blur:hover,.itw-peripheral-blur:focus-visible{filter:blur(.4px);opacity:.85;}
 
 /* ================= ADHD sim ================= */
 .itw-focus-field{position:relative;width:100%;height:500px;transition:filter .2s ease;}
