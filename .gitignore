@@ -4,3 +4,6 @@ dist
 *.log
 .vercel
 .env*
+hf-env/
+public/videos/
+public/sounds/

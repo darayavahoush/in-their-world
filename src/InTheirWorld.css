@@ -727,6 +727,10 @@ body{background:#f5e2f0;}
 .itw-glare-flash{animation:itw-glare-pulse .35s ease-out;}
 @keyframes itw-glare-pulse{0%{opacity:0;}12%{opacity:.97;}100%{opacity:0;}}
 
+/* real background footage per setting, looping behind the dots/decoys */
+.itw-scene-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;}
+.itw-scene-video-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.4));pointer-events:none;}
+
 /* peripheral vision: dots pushed to the edges (handled in JS) render
    blurred and low-contrast, since detail out there is genuinely hard to
    make out — the point isn't to hide them, it's to make them effortful. */

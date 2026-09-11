@@ -91,20 +91,43 @@ class ModuleErrorBoundary extends React.Component {
 
 const SettingsContext = createContext({ soundOn: true });
 
-/* ---------------- Audio engine (Web Audio API) ----------------
-   Every sound below is synthesized live — there are no bundled audio
-   files, so there's nothing to license or download.
+/* ---------------- Real media assets, streamed from Hugging Face ----------------
+   Hosted at https://huggingface.co/datasets/anabaena/autism-profile-assets —
+   make sure that dataset repo is set to Public, since the browser fetches
+   these anonymously; a private repo just fails silently and everything
+   falls back to the synthesized sounds / plain color backgrounds below. */
+const HF_ASSETS_BASE = "https://huggingface.co/datasets/anabaena/autism-profile-assets/resolve/main";
 
-   If you want REAL recorded clips instead (an actual chair scraping,
-   people yelling, mall ambience, etc.), drop royalty-free files
-   (e.g. from freesound.org, pixabay.com/sound-effects, or zapsplat.com)
-   into `public/sounds/`, named after the cue "kind" they should replace —
-   e.g. `public/sounds/scrape.mp3`, `public/sounds/shout.mp3`,
-   `public/sounds/argue.mp3`, `public/sounds/announce.mp3`. The kinds are
-   listed in the `cue(kind, ...)` switch below and in the SCENARIOS event
-   lists further down this file. Any kind with a matching file in that
-   folder is played as-is; anything missing quietly falls back to the
-   synthesized version — you don't have to supply all of them. */
+// Exact filename extension for each sound "kind", as uploaded.
+const SOUND_FILE_EXT = {
+  announce: "flac",
+  argue: "mp3",
+  bell: "wav",
+  buzzphone: "wav",
+  call: "wav",
+  crash: "mp3",
+  flicker: "wav",
+  footsteps: "wav",
+  glare: "wav",
+  hum: "mp3",
+  laugh: "mp3",
+  rustle: "mp3",
+  scrape: "wav",
+  screech: "mp3",
+  shout: "flac",
+  slam: "wav",
+  tap: "wav",
+  tray: "m4a",
+  whir: "wav",
+};
+
+/* ---------------- Audio engine (Web Audio API) ----------------
+   Every kind below has a synthesized fallback. Real recorded clips are
+   streamed live from the Hugging Face dataset (HF_ASSETS_BASE above) —
+   see SOUND_FILE_EXT for which kinds have a real file and what extension
+   each one is. A kind missing from that map, or a fetch that fails
+   (404, private repo, offline), just falls back to the synthesized
+   version below — nothing breaks either way. */
 
 class AudioEngine {
   constructor() {
@@ -129,36 +152,36 @@ class AudioEngine {
     return this.ctx;
   }
 
-  // Tries `/sounds/<kind>.mp3` then `.wav`. Fire-and-forget: the first
-  // time a kind is cued with no file yet loaded, this kicks off a fetch
-  // in the background and the synthesized fallback plays for *that* cue;
-  // once the fetch resolves (or confirms nothing's there), later cues of
-  // the same kind either play the real clip or stop trying.
+  // Fetches the real clip for this kind from the Hugging Face dataset
+  // (see SOUND_FILE_EXT below for the exact filename/extension of each).
+  // Fire-and-forget: the first time a kind is cued with no file yet
+  // loaded, this kicks off a fetch in the background and the synthesized
+  // fallback plays for *that* cue; once the fetch resolves (or fails),
+  // later cues of the same kind either play the real clip or stop trying.
   loadSample(kind) {
     if (this.samples.has(kind) || this.sampleMissing.has(kind) || this.samplePending.has(kind)) return;
     const ctx = this.ensure();
     if (!ctx) return;
+    const ext = SOUND_FILE_EXT[kind];
+    if (!ext) {
+      this.sampleMissing.add(kind);
+      return;
+    }
     this.samplePending.add(kind);
-    const tryExt = (exts) => {
-      if (exts.length === 0) {
+    fetch(`${HF_ASSETS_BASE}/sounds/${kind}.${ext}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("missing");
+        return res.arrayBuffer();
+      })
+      .then((buf) => ctx.decodeAudioData(buf))
+      .then((decoded) => {
+        this.samples.set(kind, decoded);
+        this.samplePending.delete(kind);
+      })
+      .catch(() => {
         this.sampleMissing.add(kind);
         this.samplePending.delete(kind);
-        return;
-      }
-      const [ext, ...rest] = exts;
-      fetch(`/sounds/${kind}.${ext}`)
-        .then((res) => {
-          if (!res.ok) throw new Error("missing");
-          return res.arrayBuffer();
-        })
-        .then((buf) => ctx.decodeAudioData(buf))
-        .then((decoded) => {
-          this.samples.set(kind, decoded);
-          this.samplePending.delete(kind);
-        })
-        .catch(() => tryExt(rest));
-    };
-    tryExt(["mp3", "wav"]);
+      });
   }
 
   playSample(kind, gain = 1) {
@@ -991,8 +1014,8 @@ function HowTo({ steps }) {
 
 // Concrete sensory events, each with its own icon and its own synthesized
 // sound (see AudioEngine.cue) — this is what's actually competing for
-// attention, not abstract static. Grouped by real-world setting, since a
-// mall, a grocery store and a kids' park each throw a different mix of
+// attention, not abstract static. Grouped by real-world setting: a mall,
+// a school classroom, and a grocery store each throw a different mix of
 // noise, light and crowding at a child.
 const SCENARIOS = {
   mall: {
@@ -1016,6 +1039,30 @@ const SCENARIOS = {
       { text: "your name, called over the noise", icon: "🙋", kind: "call" },
     ],
   },
+  school: {
+    label: "School classroom",
+    desc: "Chairs scraping, chalk squeaking, a bell about to go off, someone talking right over you.",
+    bg:
+      "radial-gradient(120% 130% at 50% 0%, rgba(255,255,255,.6), transparent 62%), linear-gradient(165deg, #fff0f0, #ffd9d9)",
+    events: [
+      { text: "chair scraping", icon: "🪑", kind: "scrape" },
+      { text: "someone's laughing", icon: "😄", kind: "laugh" },
+      { text: "the light is humming", icon: "💡", kind: "hum" },
+      { text: "bell in 3...2...", icon: "🔔", kind: "bell" },
+      { text: "LOOK AT ME WHEN I TALK", icon: "📢", kind: "shout" },
+      { text: "the fan is loud", icon: "🌀", kind: "whir" },
+      { text: "papers rustling", icon: "📄", kind: "rustle" },
+      { text: "someone dropped a tray", icon: "🍽️", kind: "tray" },
+      { text: "someone's phone buzzing", icon: "📳", kind: "buzzphone" },
+      { text: "footsteps behind you", icon: "👣", kind: "footsteps" },
+      { text: "chalk squeaking", icon: "✏️", kind: "screech" },
+      { text: "two kids arguing", icon: "🗣️", kind: "argue" },
+      { text: "door slamming", icon: "🚪", kind: "slam" },
+      { text: "your name, called twice", icon: "🙋", kind: "call" },
+      { text: "fluorescent flicker", icon: "💡", kind: "flicker" },
+      { text: "pencil tapping", icon: "✏️", kind: "tap" },
+    ],
+  },
   grocery: {
     label: "Grocery store",
     desc: "Fluorescent aisles, a freezer hum, trolleys clanging, a billing counter beeping.",
@@ -1034,24 +1081,20 @@ const SCENARIOS = {
       { text: "a trolley bumps into you", icon: "🛒", kind: "slam" },
     ],
   },
-  park: {
-    label: "Kids' park",
-    desc: "Other children shrieking mid-play, a creaking swing, a dog barking, an ice-cream cart jingle.",
-    bg:
-      "radial-gradient(120% 130% at 50% 0%, rgba(255,255,255,.55), transparent 62%), linear-gradient(165deg, #f2fff2, #c9f2d3)",
-    events: [
-      { text: "kids screaming mid-play", icon: "🧒", kind: "shout" },
-      { text: "swing chains creaking", icon: "🎠", kind: "screech" },
-      { text: "a dog barking nearby", icon: "🐕", kind: "bark" },
-      { text: "ice-cream cart jingle", icon: "🍦", kind: "bell" },
-      { text: "sun glaring off the slide", icon: "☀️", kind: "glare" },
-      { text: "a ball bounces behind you", icon: "⚽", kind: "footsteps" },
-      { text: "parents chatting loudly", icon: "🗣️", kind: "argue" },
-      { text: "your name, called across the park", icon: "🙋", kind: "call" },
-      { text: "birds squawking overhead", icon: "🐦", kind: "laugh" },
-      { text: "someone's phone buzzing", icon: "📳", kind: "buzzphone" },
-    ],
-  },
+};
+
+// Real background footage per setting, played on loop, cycling through the
+// clip list, streamed live from the same Hugging Face dataset as the
+// sounds above. Missing/broken files just fall back to the plain
+// SCENARIOS[x].bg color.
+const VIDEO_SCENES = {
+  mall: [`${HF_ASSETS_BASE}/videos/mall/1.mp4`, `${HF_ASSETS_BASE}/videos/mall/2.mp4`],
+  school: [
+    `${HF_ASSETS_BASE}/videos/school/1.mp4`,
+    `${HF_ASSETS_BASE}/videos/school/2.mp4`,
+    `${HF_ASSETS_BASE}/videos/school/3.mp4`,
+  ],
+  grocery: [`${HF_ASSETS_BASE}/videos/grocery/1.mp4`],
 };
 
 const TOTAL_ROUNDS = 8;
@@ -1061,9 +1104,23 @@ function AutismSim() {
   const { soundOn } = useContext(SettingsContext);
   const [phase, setPhase] = useState("intro"); // intro | task | done
   const [filter, setFilter] = useState(10); // exploration-only, before the graded task starts
-  const [scenario, setScenario] = useState("mall"); // mall | grocery | park
+  const [scenario, setScenario] = useState("mall"); // mall | school | grocery
   const [perspective, setPerspective] = useState("central"); // central | peripheral
   const [glare, setGlare] = useState(false);
+  const [videoIdx, setVideoIdx] = useState(0);
+  const [videoError, setVideoError] = useState(false);
+
+  // Cycle to the setting's next clip when the current one ends, looping
+  // back to the first once the list is exhausted. Reset to clip 0 and
+  // clear any earlier error whenever the setting itself changes.
+  useEffect(() => {
+    setVideoIdx(0);
+    setVideoError(false);
+  }, [scenario]);
+  const sceneVideos = VIDEO_SCENES[scenario] || [];
+  const handleVideoEnded = () => {
+    setVideoIdx((i) => (i + 1) % Math.max(1, sceneVideos.length));
+  };
   const [round, setRound] = useState(0);
   const [targetPos, setTargetPos] = useState({ top: 50, left: 50 });
   const [decoys, setDecoys] = useState([]);
@@ -1370,6 +1427,19 @@ function AutismSim() {
         }}
         stageStyle={{ background: SCENARIOS[scenario].bg }}
       >
+        {!videoError && sceneVideos.length > 0 && (
+          <video
+            key={`${scenario}-${videoIdx}`}
+            className="itw-scene-video"
+            src={sceneVideos[videoIdx]}
+            autoPlay
+            muted
+            playsInline
+            onEnded={handleVideoEnded}
+            onError={() => setVideoError(true)}
+          />
+        )}
+        {!videoError && sceneVideos.length > 0 && <div className="itw-scene-video-overlay" aria-hidden="true" />}
         <div className={`itw-glare-overlay${glare ? " itw-glare-flash" : ""}`} aria-hidden="true" />
         {phase === "task" && (
           <div className="itw-round-timer">
