@@ -51,7 +51,7 @@ function fetchTo(url, dest) {
   console.log(`[fetch-assets] fetching ${url} ...`);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   try {
-    execFileSync("curl", ["-sSLf", "--max-time", "90", "-o", dest, url], { stdio: "inherit" });
+    execFileSync("curl", ["-sSLf", "--max-time", "180", "-o", dest, url], { stdio: "inherit" });
     const size = fs.statSync(dest).size;
     if (size === 0) throw new Error("empty file");
     console.log(`[fetch-assets] ✓ ${dest} (${(size / 1024).toFixed(0)} KB)`);
