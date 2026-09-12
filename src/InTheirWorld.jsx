@@ -91,14 +91,17 @@ class ModuleErrorBoundary extends React.Component {
 
 const SettingsContext = createContext({ soundOn: true });
 
-/* ---------------- Real media assets, streamed from Hugging Face ----------------
-   Hosted at https://huggingface.co/datasets/anabaena/autism-profile-assets —
-   make sure that dataset repo is set to Public, since the browser fetches
-   these anonymously; a private repo just fails silently and everything
-   falls back to the synthesized sounds / plain color backgrounds below. */
-const HF_ASSETS_BASE = "https://huggingface.co/datasets/anabaena/autism-profile-assets/resolve/main";
+/* ---------------- Real media assets ----------------
+   Sourced from the Hugging Face dataset at
+   https://huggingface.co/datasets/anabaena/autism-profile-assets, but
+   pulled down into public/sounds and public/videos at BUILD time (see
+   scripts/fetch-assets.mjs + the "prebuild"/"predev" scripts in
+   package.json) rather than fetched by the browser at runtime — a
+   straight browser fetch to huggingface.co from another site was hanging
+   indefinitely for some visitors, so the build now fetches once,
+   server-side, and the deployed site serves everything same-origin. */
 
-// Exact filename extension for each sound "kind", as uploaded.
+// Exact filename extension for each sound "kind", as uploaded to HF.
 const SOUND_FILE_EXT = {
   announce: "flac",
   argue: "mp3",
@@ -123,10 +126,10 @@ const SOUND_FILE_EXT = {
 
 /* ---------------- Audio engine (Web Audio API) ----------------
    Every kind below has a synthesized fallback. Real recorded clips are
-   streamed live from the Hugging Face dataset (HF_ASSETS_BASE above) —
-   see SOUND_FILE_EXT for which kinds have a real file and what extension
-   each one is. A kind missing from that map, or a fetch that fails
-   (404, private repo, offline), just falls back to the synthesized
+   served from /sounds/<kind>.<ext> (see SOUND_FILE_EXT for which kinds
+   have one and what extension) — same-origin, fetched at build time as
+   described above. A kind missing from that map, or a fetch that fails
+   (file genuinely absent, offline), just falls back to the synthesized
    version below — nothing breaks either way. */
 
 class AudioEngine {
@@ -168,7 +171,7 @@ class AudioEngine {
       return;
     }
     this.samplePending.add(kind);
-    fetch(`${HF_ASSETS_BASE}/sounds/${kind}.${ext}`)
+    fetch(`/sounds/${kind}.${ext}`)
       .then((res) => {
         if (!res.ok) throw new Error("missing");
         return res.arrayBuffer();
@@ -1084,17 +1087,13 @@ const SCENARIOS = {
 };
 
 // Real background footage per setting, played on loop, cycling through the
-// clip list, streamed live from the same Hugging Face dataset as the
-// sounds above. Missing/broken files just fall back to the plain
-// SCENARIOS[x].bg color.
+// clip list — served from /videos/<scenario>/<n>.mp4, same-origin (see the
+// build-time fetch note above). Missing/broken files just fall back to
+// the plain SCENARIOS[x].bg color.
 const VIDEO_SCENES = {
-  mall: [`${HF_ASSETS_BASE}/videos/mall/1.mp4`, `${HF_ASSETS_BASE}/videos/mall/2.mp4`],
-  school: [
-    `${HF_ASSETS_BASE}/videos/school/1.mp4`,
-    `${HF_ASSETS_BASE}/videos/school/2.mp4`,
-    `${HF_ASSETS_BASE}/videos/school/3.mp4`,
-  ],
-  grocery: [`${HF_ASSETS_BASE}/videos/grocery/1.mp4`],
+  mall: ["/videos/mall/1.mp4", "/videos/mall/2.mp4"],
+  school: ["/videos/school/1.mp4", "/videos/school/2.mp4", "/videos/school/3.mp4"],
+  grocery: ["/videos/grocery/1.mp4"],
 };
 
 const TOTAL_ROUNDS = 8;
@@ -1108,19 +1107,28 @@ function AutismSim() {
   const [perspective, setPerspective] = useState("central"); // central | peripheral
   const [glare, setGlare] = useState(false);
   const [videoIdx, setVideoIdx] = useState(0);
-  const [videoError, setVideoError] = useState(false);
+  const [videoFailCount, setVideoFailCount] = useState(0);
 
   // Cycle to the setting's next clip when the current one ends, looping
   // back to the first once the list is exhausted. Reset to clip 0 and
-  // clear any earlier error whenever the setting itself changes.
+  // clear the failure count whenever the setting itself changes.
   useEffect(() => {
     setVideoIdx(0);
-    setVideoError(false);
+    setVideoFailCount(0);
   }, [scenario]);
   const sceneVideos = VIDEO_SCENES[scenario] || [];
-  const handleVideoEnded = () => {
+  const advanceVideo = () => {
     setVideoIdx((i) => (i + 1) % Math.max(1, sceneVideos.length));
   };
+  // A single missing/broken clip (e.g. one that failed to fetch at build
+  // time) shouldn't take down the whole background — just skip to the
+  // next clip in the list. Only fall back to the plain color background
+  // once every clip for this setting has failed.
+  const handleVideoError = () => {
+    setVideoFailCount((c) => c + 1);
+    advanceVideo();
+  };
+  const videoBroken = sceneVideos.length === 0 || videoFailCount >= sceneVideos.length;
   const [round, setRound] = useState(0);
   const [targetPos, setTargetPos] = useState({ top: 50, left: 50 });
   const [decoys, setDecoys] = useState([]);
@@ -1427,7 +1435,7 @@ function AutismSim() {
         }}
         stageStyle={{ background: SCENARIOS[scenario].bg }}
       >
-        {!videoError && sceneVideos.length > 0 && (
+        {!videoBroken && (
           <video
             key={`${scenario}-${videoIdx}`}
             className="itw-scene-video"
@@ -1435,11 +1443,11 @@ function AutismSim() {
             autoPlay
             muted
             playsInline
-            onEnded={handleVideoEnded}
-            onError={() => setVideoError(true)}
+            onEnded={advanceVideo}
+            onError={handleVideoError}
           />
         )}
-        {!videoError && sceneVideos.length > 0 && <div className="itw-scene-video-overlay" aria-hidden="true" />}
+        {!videoBroken && <div className="itw-scene-video-overlay" aria-hidden="true" />}
         <div className={`itw-glare-overlay${glare ? " itw-glare-flash" : ""}`} aria-hidden="true" />
         {phase === "task" && (
           <div className="itw-round-timer">

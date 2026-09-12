@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/fetch-assets.mjs",
+    "predev": "node scripts/fetch-assets.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
