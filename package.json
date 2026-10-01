@@ -17,5 +17,20 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.0"
-  }
+  },
+  "description": "Interactive simulation field guide on autism, ADHD, dyslexia, and speech differences for parents and teachers",
+  "homepage": "https://intheirworld.vercel.app",
+  "author": "Ananya Sridhar",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darayavahoush/in-their-world.git"
+  },
+  "keywords": [
+    "accessibility",
+    "autism-awareness",
+    "education",
+    "neurodiversity",
+    "react",
+    "vite"
+  ]
 }
